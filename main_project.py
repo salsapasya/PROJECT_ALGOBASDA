@@ -50,28 +50,28 @@ def main_menu():
     """)
 
     select_menu = input("Pilih Main Menu (1-3) : ")
-    while True:
-        if select_menu == "1":
-            clear_all()
-            register()
-        elif select_menu == "2":
-            clear_all()
-            login()
-        elif select_menu == "3":
-            clear_all()
-            break
-        else :
-            print("Pilihan Tidak Ditemukan")
-            clear_all()
-            main_menu()
+    if select_menu == "1":
+        clear_all()
+        register()
+    elif select_menu == "2":
+        clear_all()
+        login()
+    elif select_menu == "3":
+        clear_all()
         return
+    else :
+        print("Pilihan Tidak Ditemukan")
+        clear_all()
+        main_menu()
+        
 
 def register():
     print('''=== Silahkan memilih tipe pelaku ===
         1. Penjual
         2. Pembeli
+        3. Kembali ke Main Menu
 ''')
-    tipe_pelaku = input("Pilih Tipe Pelaku (1/2) : ")
+    tipe_pelaku = input("Pilih (1-3) : ")
     while True :
         if tipe_pelaku == "1":
             clear_all()
@@ -79,6 +79,9 @@ def register():
         elif tipe_pelaku == "2":
             clear_all()
             register_pembeli()
+        elif tipe_pelaku == "3":
+            clear_all()
+            main_menu()
         else:
             print("Pilihan tidak tersedia")
             register()
@@ -473,10 +476,10 @@ Selamat Datang {username} Di Entropin!
         keranjang_pembeli(id_pengguna, username)
     elif pilih == '3':
         clear_all()
-        cek_pesanan(id_pengguna, username)
+        pembeli_cek_pesanan(id_pengguna, username)
     elif pilih == '4':
         clear_all()
-        riwayat_pesanan_pembeli(id_pengguna, username)
+        pembeli_riwayat_pesanan(id_pengguna, username)
     elif pilih == '5':
         clear_all()
         main_menu()
@@ -528,12 +531,14 @@ def buyproduk_entropin(id_pengguna, username):
             pilih = input("Pilih (1/2): ")
             if pilih == '1':
                 while True:
-                    id_produk = int(input('Masukkan ID Produk (0 untuk selesai): '))
+                    id_produk = int(input('\nMasukkan ID Produk (0 untuk selesai): '))
                     if id_produk == '':
-                        print('ID tidak boleh dikosongi')
+                        print('\nID tidak boleh dikosongi')
+                        next()
                         continue
                     elif id_produk == 0 :
-                        input('Tekan Enter Untuk Kembali Ke Menu Pembeli')
+                        input('\nTekan Enter Untuk Kembali Ke Menu Pembeli')
+                        clear_all()
                         menu_pembeli(id_pengguna, username)
                         return
                 
@@ -541,7 +546,7 @@ def buyproduk_entropin(id_pengguna, username):
                     
                     cursor.execute("""SELECT nama_produk, harga_produk, stok_produk
                                     FROM produk
-                                    WHERE id_produk = %s
+                                    WHERE id_produk = %s AND is_delete = FALSE
                                     """, (id_produk,))
                     hasil = cursor.fetchone()
 
@@ -549,23 +554,27 @@ def buyproduk_entropin(id_pengguna, username):
                         if id_pengguna not in keranjang_entropin:
                             keranjang_entropin[id_pengguna] = []
                             
-                            keranjang_entropin[id_pengguna].append({
-                                'id_produk' : id_produk,
-                                'nama_produk' : hasil[0],
-                                'harga_produk' : hasil[1],
-                                'jumlah_item' : jumlah_item
-                            })
-                            print(f"\n {hasil[0]} berhasil ditambahkan")
-                        else: 
-                            print("Stok Tidak Cukup atau Produk Tidak Ada")
+                        keranjang_entropin[id_pengguna].append({
+                            'id_produk' : id_produk,
+                            'nama_produk' : hasil[0],
+                            'harga_produk' : hasil[1],
+                            'jumlah_item' : jumlah_item
+                        })
+                        print(f"\n {hasil[0]} berhasil ditambahkan")
+                        next()
+                        buyproduk_entropin(id_pengguna, username)
+                        return
+                    else: 
+                        print("\nStok Tidak Cukup atau Produk Tidak Ada")
+                        next()
             elif pilih == '2':
+                cursor.close()
+                connection.close()
                 clear_all()
                 menu_pembeli(id_pengguna, username)     
             else:
                 print('Menu Yang Dipilih Tidak Tersedia')
                 next()
-                cursor.close()
-                connection.close()
                 clear_all()
                 buyproduk_entropin(id_pengguna, username)
                 return
@@ -657,6 +666,19 @@ def keranjang_pembeli(id_pengguna, username):
                                                 id_pesanan,
                                                 item['id_produk']
                                     ))
+                
+                # insert ke laporan
+                insert_laporan = """
+                INSERT INTO laporan (nama_produk,
+                                        status_pesanan,
+                                        id_pesanan)
+                VALUES(%s, %s, %s)
+                """
+                cursor.execute(insert_laporan, (item['nama_produk'],
+                                        'menunggu pembayaran',
+                                        id_pesanan
+                                    ))
+
                 cursor.execute("""UPDATE produk 
                                     SET stok_produk = stok_produk - %s
                                     WHERE id_produk = %s""",
@@ -675,6 +697,10 @@ def keranjang_pembeli(id_pengguna, username):
                     cursor.execute("""UPDATE pesanan SET status_pesanan = %s
                                         WHERE id_pengguna = %s""",
                                     (update_status, id_pengguna))
+                    
+                    cursor.execute("""UPDATE laporan SET status_pesanan = %s
+                                        WHERE id_pesanan = %s""",
+                                    (update_status, id_pesanan))
                     connection.commit()
 
                     keranjang_entropin[id_pengguna] = []
@@ -722,7 +748,7 @@ def keranjang_pembeli(id_pengguna, username):
         clear_all()
         keranjang_pembeli(id_pengguna, username)
 
-def cek_pesanan(id_pengguna, username):
+def pembeli_cek_pesanan(id_pengguna, username):
     clear_all()
     connection = connect_db()
     if connection is None:
@@ -754,7 +780,6 @@ def cek_pesanan(id_pengguna, username):
             next()
             cursor.close()
             connection.close()
-            clear_all()
             menu_pembeli(id_pengguna, username)
             return
         
@@ -763,10 +788,9 @@ def cek_pesanan(id_pengguna, username):
         next()
         if connection:
             connection.close()
-        clear_all()
-        cek_pesanan(id_pengguna, username)
+        menu_pembeli(id_pengguna, username)
 
-def riwayat_pesanan_pembeli(id_pengguna, username):
+def pembeli_riwayat_pesanan(id_pengguna, username):
     clear_all()
     connection = connect_db()
     if connection is None:
@@ -783,7 +807,7 @@ def riwayat_pesanan_pembeli(id_pengguna, username):
                         FROM pesanan p
                         JOIN laporan l ON p.id_pesanan = l.id_pesanan
                         JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
-                        WHERE id_pengguna = %s"""
+                        WHERE id_pengguna = %s AND l.status_pesanan IN ('selesai', 'dibatalkan')"""
         cursor.execute(cek_laporan, (id_pengguna,))
         laporan = cursor.fetchall()
 
@@ -798,17 +822,16 @@ def riwayat_pesanan_pembeli(id_pengguna, username):
             next()
             cursor.close()
             connection.close()
-            clear_all()
             menu_pembeli(id_pengguna, username)
             return
         
     except Error as error:
-        print(f"\nTerjadi kesalahan saat mengecek pesanan: {error}")
+        print(f"\nTerjadi kesalahan saat meihat riwayat pesanan: {error}")
         next()
         if connection:
             connection.close()
         clear_all()
-        cek_pesanan(id_pengguna, username)
+        menu_pembeli(id_pengguna, username)
 
 def menu_penjual(id_pengguna, username):
     clear_all()
@@ -891,8 +914,13 @@ def penjual_kelola_produk(id_pengguna, username):
                 print("\n===== PRODUK ENTROPIN =====\n")
                 headers = ["ID", "NAMA PRODUK", "STOK", "HARGA", "KATEGORI", "DESKRIPSI", "ID PENGGUNA"]
                 print(tabulate(produk, headers=headers, tablefmt="fancy_grid"))
+                input("\nTekan enter untuk kembali ke menu penjual")
+                clear_all()
+                penjual_kelola_produk(id_pengguna, username)
             else:
                 print("\nBelum ada produk.")
+                next()
+                penjual_kelola_produk(id_pengguna, username)
         
         elif pilihan == "2": #penjual menambahkan produk
             clear_all()
@@ -955,6 +983,7 @@ def penjual_kelola_produk(id_pengguna, username):
                 connection.commit()
                 print(f"Produk {nama_produk} berhasil ditambahkan")
                 next()
+                penjual_kelola_produk(id_pengguna, username)
         
         elif pilihan == "3": #penjual update produk
             clear_all()
@@ -1024,7 +1053,8 @@ def penjual_kelola_produk(id_pengguna, username):
                 next()
                 penjual_kelola_produk(id_pengguna, username)
         elif pilihan == "5": #menu kembali
-            back()
+            input("\nTekan enter untuk kembali ke menu penjual")
+            clear_all()
             menu_penjual(id_pengguna, username)
         else:
             print('Menu Yang Dipilih Tidak Tersedia')
@@ -1156,99 +1186,128 @@ Selamat Datang {username} Di Entropin!
 
     if pilih == '1':
         clear_all()
-        cek_pesanan(id_pengguna, username)       
+        admin_cek_pesanan(id_pengguna, username)       
     elif pilih == '2':
         clear_all()
-        kelola_pasar(id_pengguna, username)
+        admin_kelola_pasar(id_pengguna, username)
     elif pilih == "3":
         clear_all()
         main_menu()
     else:
-        print("Maaf, pilihan tidak ditemukan")
-        input("tekan enter untuk melanjutkan...")
+        print("Pilihan tidak ditemukan")
+        next()
         menu_admin(id_pengguna, username)
         return
 
-def cek_pesanan(id_pengguna, username):
-    connection = connect_db()
-    if connection is None:
-        return
-    
-    try:
-        cursor = connection.cursor()
+def admin_cek_pesanan(id_pengguna, username):
+    while True:
+        connection = connect_db()
+        if connection is None:
+            return
+        
+        try:
+            cursor = connection.cursor()
 
-        query = """SELECT p.id_pesanan,
-                           p.tanggal_pesanan,
-                           p.status_pesanan,
-                           p.nama_produk,
-                           dp.jumlah_pesanan,
-                           p.metode_pembayaran,
-                           pe.nama_pengguna
-                    FROM pesanan p
-                    JOIN pengguna pe ON p.id_pengguna = pe.id_pengguna
-                    JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
-                    WHERE pe.role = 'pembeli'
-                    ORDER BY p.tanggal_pesanan ASC"""
-        cursor.execute(query)
-        pesanan_list = cursor.fetchall()
+            query = """SELECT p.id_pesanan,
+                            p.tanggal_pesanan,
+                            p.status_pesanan,
+                            p.nama_produk,
+                            dp.jumlah_pesanan,
+                            p.metode_pembayaran,
+                            pe.nama_pengguna
+                        FROM pesanan p
+                        JOIN pengguna pe ON p.id_pengguna = pe.id_pengguna
+                        JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
+                        WHERE pe.role = 'pembeli'
+                        ORDER BY p.tanggal_pesanan ASC"""
+            cursor.execute(query)
+            pesanan_list = cursor.fetchall()
 
-        if pesanan_list:
-            print("\n === DAFTAR PESANAN ===")
+            if pesanan_list:
+                clear_all()
+                print("\n === DAFTAR PESANAN ===")
 
-            headers = ["ID", "TANGGAL PESANAN", "STATUS", "PRODUK", "JUMLAH PRODUK", "METODE PEMBAYARAN", "PELANGGAN"]
-            print(tabulate(pesanan_list, headers=headers, tablefmt="fancy_grid"))
+                headers = ["ID", "TANGGAL PESANAN", "STATUS", "PRODUK", "JUMLAH PRODUK", "METODE PEMBAYARAN", "PELANGGAN"]
+                print(tabulate(pesanan_list, headers=headers, tablefmt="fancy_grid"))
             
+            else:
+                print("\nBelum ada pesanan.")
+                next()
+                cursor.close()
+                connection.close()
+                return menu_admin(id_pengguna, username)
+
             print("\n === UBAH STATUS PESANAN ===")
+            print("(Masukkan '0' untuk kembali ke menu admin)")
             id_pesanan = input("\n Masukkan id pesanan: ")
+            if id_pesanan == '':
+                print("\nID pesanan tidak boleh kosong")
+                next()
+                admin_cek_pesanan(id_pengguna, username)
+                continue
+            elif id_pesanan.isdigit() == False:
+                print("\nID pesanan harus berupa angka")
+                next()
+                admin_cek_pesanan(id_pengguna, username)
+                continue
+            elif id_pesanan == '0':
+                next()
+                menu_admin(id_pengguna, username)
+                return menu_admin(id_pengguna, username)
 
             print("""\nStatus yang tersedia:
-                  1. dikirim
-                  2. selesai
-                  3. dibatalkan""")
+                1. dikirim
+                2. selesai
+                3. dibatalkan""")
 
             status_pilihan = input("\nPilih status baru (1-3): ")
-
+            
             status_map = {
                 "1": "dikirim",
                 "2": "selesai",
-                "3": "dibatalkan"
-            }
+                "3": "dibatalkan"}
 
             if status_pilihan in status_map:
                 status_baru = status_map[status_pilihan]
-                
-                update_query = """UPDATE pesanan
-                           SET status_pesanan = %s
-                           WHERE id_pesanan = %s
-                           """
-                cursor.execute(update_query,(status_baru, id_pesanan))
+                    
+                update_pesanan = """UPDATE pesanan
+                                SET status_pesanan = %s
+                                WHERE id_pesanan = %s
+                                """
+                cursor.execute(update_pesanan,(status_baru, id_pesanan))
                 connection.commit()
 
+                update_laporan = """UPDATE laporan
+                                SET status_pesanan = %s
+                                WHERE id_pesanan = %s
+                                """
+                cursor.execute(update_laporan,(status_baru, id_pesanan))
+                connection.commit()
+                    
                 print(f"\n status pesanan dengan ID {id_pesanan} berhasil diubah menjadi {status_baru}")
                 next()
-                menu_admin(id_pengguna, username)    
+                cursor.close()
+                connection.close()
+                clear_all()
+                continue   
             else:
                 print("\nPilihan tidak valid")
                 next()
-                cek_pesanan(id_pengguna, username)
-        else:
-            print("\nBelum ada pesanan.")
-
-            cursor.close()
-        connection.close()
-        input("\nTekan Enter...")
-        clear_all()
-        menu_admin(id_pengguna, username)
+                admin_cek_pesanan(id_pengguna, username)
+                cursor.close()
+                connection.close()
+                break
+                
         
-    except Error as error:
-        print(f"\n Error: {error}")
-        if connection:
-            connection.close()
-        input("Tekan Enter...")
-        clear_all()
-        menu_admin(id_pengguna, username)
+        except Error as error:
+            print(f"\n Error: {error}")
+            if connection:
+                connection.close()
+            next()
+            menu_admin(id_pengguna, username)
+            return
 
-def kelola_pasar(id_pengguna, username):
+def admin_kelola_pasar(id_pengguna, username):
     clear_all()
     connection = connect_db()
     if connection is None:
@@ -1269,14 +1328,22 @@ def kelola_pasar(id_pengguna, username):
 
         if pilih == '1': #lihat data pasar
             clear_all()
-            pasar = """SELECT * FROM kelola_pasar WHERE is_delete = FALSE"""
+            pasar = """SELECT id_kelola_pasar,
+                            nama_produk_pasar,
+                            harga_min_kelola_pasar,
+                            harga_max_kelola_pasar,
+                            harga_rata_kelola_pasar,
+                            lokasi_pasar
+                    FROM kelola_pasar 
+                    WHERE is_delete = FALSE"""
             cursor.execute(pasar)
             data_pasar = cursor.fetchall()
-            headers = ["PRODUK", "HARGA MIN", "HARGA MAX", "HARGA RATA-RATA", "LOKASI"]
+
+            headers = ["ID", "NAMA PRODUK", "HARGA MIN", "HARGA MAX", "HARGA RATA-RATA", "LOKASI"]
             print(tabulate(data_pasar, headers=headers, tablefmt="fancy_grid"))
 
             back()
-            kelola_pasar(id_pengguna, username)
+            admin_kelola_pasar(id_pengguna, username)
 
         elif pilih == '2': #tambah data pasar
             clear_all()
@@ -1287,31 +1354,31 @@ def kelola_pasar(id_pengguna, username):
             lokasi_pasar = input("lokasi pasar: ").title()
             query = """
             INSERT INTO kelola_pasar(nama_produk_pasar,
-                             harga_min_kelola_pasar, 
-                             harga_max_kelola_pasar, 
-                             harga_rata_kelola_pasar, 
-                             lokasi_pasar, 
-                             is_delete, 
-                             id_pengguna)
-             VALUES  (%s, %s, %s, %s, %s, %s, %s)"""
+                        harga_min_kelola_pasar, 
+                        harga_max_kelola_pasar, 
+                        harga_rata_kelola_pasar, 
+                        lokasi_pasar, 
+                        is_delete, 
+                        id_pengguna)
+            VALUES  (%s, %s, %s, %s, %s, %s, %s)"""
 
             cursor.execute(query, (nama_produk, harga_minim, harga_maksimal, harga_rata_rata, lokasi_pasar, 'FALSE', id_pengguna ))
             connection.commit()
 
             print("\nPRODUK BERHASIL DITAMBAHKAN!")
             back()
-            kelola_pasar(id_pengguna, username)
+            admin_kelola_pasar(id_pengguna, username)
 
         elif pilih == "3": #update data pasar
             clear_all()
             query = """SELECT id_kelola_pasar,
-                              nama_produk_pasar,
-                              harga_min_kelola_pasar,
-                              harga_max_kelola_pasar,
-                              harga_rata_kelola_pasar,
-                              lokasi_pasar
+                            nama_produk_pasar,
+                            harga_min_kelola_pasar,
+                            harga_max_kelola_pasar,
+                            harga_rata_kelola_pasar,
+                            lokasi_pasar
                     FROM kelola_pasar 
-                    WHERE is_delete = TRUE"""
+                    WHERE is_delete = FALSE"""
             cursor.execute(query)
             data = cursor.fetchall()
 
@@ -1335,20 +1402,20 @@ def kelola_pasar(id_pengguna, username):
 
                 print("\nDATA BERHASIL DIUBAH...")
                 back()
-                kelola_pasar(id_pengguna, username)
+                admin_kelola_pasar(id_pengguna, username)
             else:
                 print("\nbelum ada data pasar")
                 next()
-                kelola_pasar(id_pengguna, username)
+                admin_kelola_pasar(id_pengguna, username)
 
         elif pilih == "4": #hapus data pasar
             clear_all()
             query ="""SELECT id_kelola_pasar,
-                              nama_produk_pasar,
-                              harga_min_kelola_pasar,
-                              harga_max_kelola_pasar,
-                              harga_rata_kelola_pasar,
-                              lokasi_pasar
+                            nama_produk_pasar,
+                            harga_min_kelola_pasar,
+                            harga_max_kelola_pasar,
+                            harga_rata_kelola_pasar,
+                            lokasi_pasar
                     FROM kelola_pasar 
                     WHERE is_delete = FALSE"""
             cursor.execute(query)
@@ -1368,7 +1435,7 @@ def kelola_pasar(id_pengguna, username):
 
                 print("\nData pasar berhasil dihapus")
                 back()
-                kelola_pasar(id_pengguna, username)
+                admin_kelola_pasar(id_pengguna, username)
         elif pilih == "5": #kembali
             back()
             menu_admin(id_pengguna, username)
