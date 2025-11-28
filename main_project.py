@@ -762,16 +762,22 @@ def pembeli_cek_pesanan(id_pengguna, username):
                                 p.nama_produk,
                                 dp.jumlah_pesanan,
                                 p.status_pesanan,
-                                p.metode_pembayaran
+                                p.metode_pembayaran,
+                                CONCAT(j.nama_jalan, ', ', d.nama_desa, ', ', k.nama_kecamatan, ', ', kb.nama_kabupaten) AS alamat
                         FROM pesanan p
                         JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
-                        WHERE id_pengguna = %s"""
+                        JOIN pengguna pg ON p.id_pengguna = pg.id_pengguna
+                        JOIN jalan j ON pg.id_jalan = j.id_jalan
+                        JOIN desa d ON j.id_desa = d.id_desa
+                        JOIN kecamatan k ON d.id_kecamatan = k.id_kecamatan
+                        JOIN kabupaten kb ON k.id_kabupaten = kb.id_kabupaten
+                        WHERE p.id_pengguna = %s"""
         cursor.execute(cek_pesanan, (id_pengguna,))
         pesanan = cursor.fetchall()
         
         if pesanan:
             print(f'\n===== DATA PESANAN {username} =====\n')
-            headers = ['ID Pesanan', 'Tanggal Pesanan', 'Nama Produk', 'Banyak Produk', 'Status', 'Metode Bayar']
+            headers = ['ID', 'Tanggal Pesanan', 'Nama Produk', 'Banyak Produk', 'Status', 'Metode Bayar', 'Alamat']
             print(tabulate(pesanan, headers=headers, tablefmt='fancy_grid'))
             back()
             menu_pembeli(id_pengguna, username)
@@ -1201,6 +1207,7 @@ Selamat Datang {username} Di Entropin!
 
 def admin_cek_pesanan(id_pengguna, username):
     while True:
+        clear_all()
         connection = connect_db()
         if connection is None:
             return
@@ -1214,10 +1221,15 @@ def admin_cek_pesanan(id_pengguna, username):
                             p.nama_produk,
                             dp.jumlah_pesanan,
                             p.metode_pembayaran,
-                            pe.nama_pengguna
+                            pe.nama_pengguna,
+                            CONCAT(j.nama_jalan, ', ', d.nama_desa, ', ', k.nama_kecamatan, ', ', kb.nama_kabupaten) AS alamat
                         FROM pesanan p
                         JOIN pengguna pe ON p.id_pengguna = pe.id_pengguna
                         JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
+                        JOIN jalan j ON pe.id_jalan = j.id_jalan
+                        JOIN desa d ON j.id_desa = d.id_desa
+                        JOIN kecamatan k ON d.id_kecamatan = k.id_kecamatan
+                        JOIN kabupaten kb ON k.id_kabupaten = kb.id_kabupaten
                         WHERE pe.role = 'pembeli'
                         ORDER BY p.tanggal_pesanan ASC"""
             cursor.execute(query)
@@ -1227,7 +1239,7 @@ def admin_cek_pesanan(id_pengguna, username):
                 clear_all()
                 print("\n === DAFTAR PESANAN ===")
 
-                headers = ["ID", "TANGGAL PESANAN", "STATUS", "PRODUK", "JUMLAH PRODUK", "METODE PEMBAYARAN", "PELANGGAN"]
+                headers = ["ID", "TGL PESANAN", "STATUS", "PRODUK", "QUANTITY", "METODE BAYAR", "PELANGGAN", "ALAMAT"]
                 print(tabulate(pesanan_list, headers=headers, tablefmt="fancy_grid"))
             
             else:
@@ -1239,20 +1251,20 @@ def admin_cek_pesanan(id_pengguna, username):
 
             print("\n === UBAH STATUS PESANAN ===")
             print("(Masukkan '0' untuk kembali ke menu admin)")
-            id_pesanan = input("\n Masukkan id pesanan: ")
+            id_pesanan = input("\n Masukkan id pesanan: ").strip()
+            
             if id_pesanan == '':
                 print("\nID pesanan tidak boleh kosong")
                 next()
-                admin_cek_pesanan(id_pengguna, username)
                 continue
-            elif id_pesanan.isdigit() == False:
+            elif not id_pesanan.isdigit():
                 print("\nID pesanan harus berupa angka")
                 next()
-                admin_cek_pesanan(id_pengguna, username)
                 continue
             elif id_pesanan == '0':
                 next()
-                menu_admin(id_pengguna, username)
+                cursor.close()
+                connection.close()
                 return menu_admin(id_pengguna, username)
 
             print("""\nStatus yang tersedia:
@@ -1260,7 +1272,7 @@ def admin_cek_pesanan(id_pengguna, username):
                 2. selesai
                 3. dibatalkan""")
 
-            status_pilihan = input("\nPilih status baru (1-3): ")
+            status_pilihan = input("\nPilih status baru (1-3): ").strip()
             
             status_map = {
                 "1": "dikirim",
@@ -1274,29 +1286,23 @@ def admin_cek_pesanan(id_pengguna, username):
                                 SET status_pesanan = %s
                                 WHERE id_pesanan = %s
                                 """
-                cursor.execute(update_pesanan,(status_baru, id_pesanan))
+                cursor.execute(update_pesanan, (status_baru, id_pesanan))
                 connection.commit()
 
                 update_laporan = """UPDATE laporan
                                 SET status_pesanan = %s
                                 WHERE id_pesanan = %s
                                 """
-                cursor.execute(update_laporan,(status_baru, id_pesanan))
+                cursor.execute(update_laporan, (status_baru, id_pesanan))
                 connection.commit()
                     
-                print(f"\n status pesanan dengan ID {id_pesanan} berhasil diubah menjadi {status_baru}")
+                print(f"\n Status pesanan dengan ID {id_pesanan} berhasil diubah menjadi {status_baru}")
                 next()
-                cursor.close()
-                connection.close()
-                clear_all()
                 continue   
             else:
                 print("\nPilihan tidak valid")
                 next()
-                admin_cek_pesanan(id_pengguna, username)
-                cursor.close()
-                connection.close()
-                break
+                continue
                 
         
         except Error as error:
@@ -1304,9 +1310,8 @@ def admin_cek_pesanan(id_pengguna, username):
             if connection:
                 connection.close()
             next()
-            menu_admin(id_pengguna, username)
-            return
-
+            return menu_admin(id_pengguna, username)
+        
 def admin_kelola_pasar(id_pengguna, username):
     clear_all()
     connection = connect_db()
