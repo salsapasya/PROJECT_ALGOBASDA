@@ -9,10 +9,10 @@ def connect_db():
     try:
         connection = psycopg2.connect(
             user = "postgres",
-            password = "enikcantik10",
-            host = "localhost",
+            password = "sabila.19",
+            host = "127.0.0.1",
             port = "5432",
-            database = "entropin_aman"
+            database = "entropin end game"
         )
         return connection
     except Error as error:
@@ -106,6 +106,10 @@ def register_penjual():
                 print('\nNama tidak boleh kosong')
                 next()
                 continue
+            if nama.isdigit():
+                print('\nNama tidak boleh angka')
+                next()
+                continue
             elif nama == "exit":
                 input("\nTekan enter untuk kembali ke menu awal")
                 next()
@@ -154,7 +158,6 @@ def register_penjual():
                 id_jalan = data_jalan[0]
                 next()
                 break
-
         while True:
             nomor_telepon = input('Nomor Telepon : ').strip()
             if nomor_telepon == '':
@@ -258,6 +261,7 @@ def register_penjual():
         connection.close()
         clear_all()
         main_menu()
+        return
         
     except Error as error:
         print(f"\nTerjadi kesalahan saat registrasi: {error}")
@@ -266,6 +270,7 @@ def register_penjual():
             connection.close()
         clear_all()
         register_penjual()
+        return
 
 def register_pembeli():
     clear_all()
@@ -284,6 +289,10 @@ def register_pembeli():
             nama = input('Nama Lengkap : ').strip()
             if nama == '':
                 print('\nNama tidak boleh kosong')
+                next()
+                continue
+            if nama.isdigit():
+                print('\nNama tidak boleh angka')
                 next()
                 continue
             elif nama == "exit":
@@ -440,6 +449,7 @@ def register_pembeli():
         connection.close()
         clear_all()
         main_menu()
+        return
         
     except Error as error:
         print(f"\nTerjadi kesalahan saat registrasi: {error}")
@@ -448,6 +458,7 @@ def register_pembeli():
             connection.close()
         clear_all()
         register_pembeli()
+        return
     
 def login():
     clear_all()
@@ -512,7 +523,8 @@ def login():
                 menu_pembeli(id_pengguna, username)
             else:
                 print("Role tidak dikenali!")
-                main_menu()
+                login()
+                return
         else:
             clear_all()
             print("\nUsername atau Password salah!")
@@ -521,6 +533,7 @@ def login():
             connection.close()
             clear_all()
             login()
+            return
             
     except Error as error:
         print(f"\nTerjadi kesalahan saat login: {error}")
@@ -529,6 +542,7 @@ def login():
             connection.close()
         clear_all()
         login()
+        return
 
 def menu_pembeli(id_pengguna, username):
     clear_all()
@@ -564,12 +578,14 @@ Selamat Datang {username} Di Entropin!
     elif pilih == '5':
         clear_all()
         main_menu()
+        return
     else:
         print('''
             Pilihan Tidak Valid
             Tekan Enter Untuk Kembali Ke Menu''')
         clear_all()
-        menu_pembeli()
+        menu_pembeli(id_pengguna, username)
+        return
     
 keranjang_entropin = {}
 
@@ -595,6 +611,7 @@ def buyproduk_entropin(id_pengguna, username):
             produk p
         JOIN kategori_produk k ON p.id_kategori_produk = k.id_kategori_produk
         WHERE is_delete = FALSE AND stok_produk > 0
+        ORDER BY k.jenis_produk
         """
         cursor.execute(query)
         list_produk = cursor.fetchall()
@@ -612,7 +629,7 @@ def buyproduk_entropin(id_pengguna, username):
             pilih = input("Pilih (1/2): ")
             if pilih == '1':
                 while True:
-                    id_produk = int(input('\nMasukkan ID Produk (0 untuk selesai): '))
+                    id_produk = input('\nMasukkan ID Produk (0 untuk selesai): ').strip()
                     if id_produk == '':
                         print('\nID tidak boleh dikosongi')
                         next()
@@ -622,37 +639,50 @@ def buyproduk_entropin(id_pengguna, username):
                         clear_all()
                         menu_pembeli(id_pengguna, username)
                         return
-                
+                    elif not id_produk.isdigit():
+                        print('\nID Produk harus berupa angka')
+                        next()
+                        continue
+                    else:
+                        break
+                while True:
                     jumlah_item = int(input('Masukkan Jumlah Yang Ingin Dibeli: '))
+                    if jumlah_item == '':
+                        print('\nJumlah Item tidak boleh dikosongi')
+                        next()
+                        continue
+                    else:
+                        break
                     
-                    cursor.execute("""SELECT nama_produk, harga_produk, stok_produk
-                                    FROM produk
-                                    WHERE id_produk = %s AND is_delete = FALSE
-                                    """, (id_produk,))
-                    hasil = cursor.fetchone()
+                cursor.execute("""SELECT nama_produk, harga_produk, stok_produk
+                                FROM produk
+                                WHERE id_produk = %s AND is_delete = FALSE
+                                """, (id_produk,))
+                hasil = cursor.fetchone()
 
-                    if hasil and hasil[2] >= jumlah_item:
-                        if id_pengguna not in keranjang_entropin:
-                            keranjang_entropin[id_pengguna] = []
+                if hasil and hasil[2] >= jumlah_item:
+                    if id_pengguna not in keranjang_entropin:
+                        keranjang_entropin[id_pengguna] = []
                             
-                        keranjang_entropin[id_pengguna].append({
-                            'id_produk' : id_produk,
-                            'nama_produk' : hasil[0],
-                            'harga_produk' : hasil[1],
-                            'jumlah_item' : jumlah_item
+                    keranjang_entropin[id_pengguna].append({
+                        'id_produk' : id_produk,
+                        'nama_produk' : hasil[0],
+                        'harga_produk' : hasil[1],
+                        'jumlah_item' : jumlah_item
                         })
-                        print(f"\n {hasil[0]} berhasil ditambahkan")
-                        next()
-                        buyproduk_entropin(id_pengguna, username)
-                        return
-                    else: 
-                        print("\nStok Tidak Cukup atau Produk Tidak Ada")
-                        next()
+                    print(f"\n {hasil[0]} berhasil ditambahkan")
+                    next()
+                    buyproduk_entropin(id_pengguna, username)
+                    return
+                else: 
+                    print("\nStok Tidak Cukup atau Produk Tidak Ada")
+                    next()
             elif pilih == '2':
                 cursor.close()
                 connection.close()
                 clear_all()
-                menu_pembeli(id_pengguna, username)     
+                menu_pembeli(id_pengguna, username) 
+                return    
             else:
                 print('Menu Yang Dipilih Tidak Tersedia')
                 next()
@@ -667,6 +697,7 @@ def buyproduk_entropin(id_pengguna, username):
             connection.close()
         clear_all()
         buyproduk_entropin(id_pengguna, username)
+        return
 
 def keranjang_pembeli(id_pengguna, username):
     clear_all()
@@ -709,34 +740,61 @@ def keranjang_pembeli(id_pengguna, username):
         pilih = input("\nPilih (1-4): ")
 
         if pilih == '1':
+            clear_all()
             while True:
-                metode_pembayaran = input("Metode Pembayaran (Nama Bank): ").strip()
+                print('''Daftar Nama Bank
+                1. BCA
+                2. BRI
+                3. MANDIRI
+                4. BNI
+                ''')
+                metode_pembayaran = input("\nMetode Pembayaran (Nama Bank): ").strip()
                 if metode_pembayaran == '':
                     print('\nSilahkan masukkan nama bank')
+                    next()
+                    continue
+                elif metode_pembayaran not in ['BCA', 'BRI', 'MANDIRI', 'BNI']:
+                    print('\nMetode pembayaran tidak valid. Pilih: BCA, BRI, MANDIRI, atau BNI')
                     next()
                     continue
                 else:
                     next()
                     break
+            while True:
+                bayar = input('\nApakah anda ingin membayar sekarang (iya/tidak)? ').strip().lower()
+                if bayar == '':
+                    print('\nTidak boleh diisi kosong')
+                    next()
+                    continue
+                elif bayar not in ['iya', 'tidak']:
+                    print('\nPilihan tidak valid. Ketik "iya" atau "tidak"')
+                    next()
+                    continue
+                else:
+                    break
+
+            if bayar == 'iya':
+                status_pesanan = 'diproses'
+            else:
+                status_pesanan = 'menunggu pembayaran'
 
             for item in keranjang:
                 insert_pesanan = """
                 INSERT INTO pesanan (tanggal_pesanan, 
-                                    nama_produk,
                                     status_pesanan,
                                     metode_pembayaran,
                                     id_pengguna)
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s)
                 RETURNING id_pesanan
                 """
                 cursor.execute(insert_pesanan, (date.today(),
-                                                item['nama_produk'],
-                                                'menunggu pembayaran',
+                                                status_pesanan,
                                                 metode_pembayaran,
                                                 id_pengguna
                                 ))
                 id_pesanan = cursor.fetchone()[0]
 
+                # insert ke detail pesanan
                 insert_detail = """
                 INSERT INTO detail_pesanan(jumlah_pesanan, 
                                             id_pesanan,
@@ -750,14 +808,14 @@ def keranjang_pembeli(id_pengguna, username):
                 
                 # insert ke laporan
                 insert_laporan = """
-                INSERT INTO laporan (nama_produk,
-                                        status_pesanan,
-                                        id_pesanan)
+                INSERT INTO laporan (tanggal_laporan, 
+                                    status_akhir,
+                                    id_pesanan)
                 VALUES(%s, %s, %s)
                 """
-                cursor.execute(insert_laporan, (item['nama_produk'],
-                                        'menunggu pembayaran',
-                                        id_pesanan
+                cursor.execute(insert_laporan, (date.today(),
+                                                status_pesanan,
+                                                id_pesanan
                                     ))
 
                 cursor.execute("""UPDATE produk 
@@ -765,38 +823,27 @@ def keranjang_pembeli(id_pengguna, username):
                                     WHERE id_produk = %s""",
                                     (item['jumlah_item'], item['id_produk']))
                 connection.commit()
-        
-            while True:
-                bayar = input('Apakah anda ingin membayar (iya/tidak)? ').strip()
-                if bayar == '':
-                    print('\nTidak boleh diisi kosong')
-                    next()
-                    continue
-                elif bayar == 'iya':
-                    clear_all()
-                    update_status = 'diproses'
-                    cursor.execute("""UPDATE pesanan SET status_pesanan = %s
-                                        WHERE id_pengguna = %s""",
-                                    (update_status, id_pengguna))
-                    
-                    cursor.execute("""UPDATE laporan SET status_pesanan = %s
-                                        WHERE id_pesanan = %s""",
-                                    (update_status, id_pesanan))
-                    connection.commit()
 
-                    keranjang_entropin[id_pengguna] = []
-                    print(f'\nPesanan {username} sedang diproses')
-                    next()
-                    menu_pembeli(id_pengguna, username)
-                else:
-                    menu_pembeli(id_pengguna, username)
-                    break
+            keranjang_entropin[id_pengguna] = []
+            
+            if bayar == 'iya':
+                print(f'\nPesanan {username} sedang diproses')
+            else:
+                print(f'\nPesanan {username} disimpan. Status: Menunggu Pembayaran')
+            
+            back()
+            menu_pembeli(id_pengguna, username)
+            return
         elif pilih == '2':
             while True:
-                hapus_produk = int(input('Nomor Produk yang ingin dihapus : '))
+                hapus_produk = input('Nomor Produk yang ingin dihapus : ').strip()
                 hapus_produk_fix = hapus_produk - 1
                 if hapus_produk == '':
                     print('\nTidak boleh kosong')
+                    next()
+                    continue
+                elif not hapus_produk.isdigit():
+                    print('\nNomor harus berupa angka')
                     next()
                     continue
                 elif hapus_produk_fix >= 0 and hapus_produk_fix < len(keranjang):
@@ -828,6 +875,7 @@ def keranjang_pembeli(id_pengguna, username):
             connection.close()
         clear_all()
         keranjang_pembeli(id_pengguna, username)
+        return
 
 def pembeli_cek_pesanan(id_pengguna, username):
     clear_all()
@@ -840,28 +888,99 @@ def pembeli_cek_pesanan(id_pengguna, username):
 
         cek_pesanan = """SELECT p.id_pesanan,
                                 p.tanggal_pesanan,
-                                p.nama_produk,
+                                pr.nama_produk,
                                 dp.jumlah_pesanan,
                                 p.status_pesanan,
                                 p.metode_pembayaran,
                                 CONCAT(j.nama_jalan, ', ', d.nama_desa, ', ', k.nama_kecamatan, ', ', kb.nama_kabupaten) AS alamat
                         FROM pesanan p
                         JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
-                        JOIN pengguna pg ON p.id_pengguna = pg.id_pengguna
+                        JOIN produk pr ON dp.id_produk = pr.id_produk
+                        JOIN pengguna pg ON pr.id_pengguna = pg.id_pengguna
                         JOIN jalan j ON pg.id_jalan = j.id_jalan
                         JOIN desa d ON j.id_desa = d.id_desa
                         JOIN kecamatan k ON d.id_kecamatan = k.id_kecamatan
                         JOIN kabupaten kb ON k.id_kabupaten = kb.id_kabupaten
-                        WHERE p.id_pengguna = %s"""
+                        WHERE p.id_pengguna = %s
+                            AND p.status_pesanan IN ('diproses','dikirim','menunggu pembayaran')
+                        ORDER BY p.tanggal_pesanan DESC"""
         cursor.execute(cek_pesanan, (id_pengguna,))
         pesanan = cursor.fetchall()
         
         if pesanan:
             print(f'\n===== DATA PESANAN {username} =====\n')
-            headers = ['ID', 'Tanggal Pesanan', 'Nama Produk', 'Banyak Produk', 'Status', 'Metode Bayar', 'Alamat']
+            headers = ['ID', 'Tgl Pesanan', 'Nama Produk', 'Banyak Produk', 'Status', 'Metode Bayar', 'Alamat']
             print(tabulate(pesanan, headers=headers, tablefmt='fancy_grid'))
-            back()
-            menu_pembeli(id_pengguna, username)
+            print('''\n
+            1. Bayar Pesanan (Ubah Status)
+            2. Kembali ke Menu Pembeli
+            ''')
+            pilih = input("\nPilih (1/2): ").strip()
+            
+            if pilih == '1':
+                # FITUR BAYAR PESANAN
+                while True:
+                    id_pesanan_bayar = input("\nMasukkan ID Pesanan yang ingin dibayar (0 untuk kembali): ").strip()
+                    if id_pesanan_bayar == '0':
+                        clear_all()
+                        menu_pembeli(id_pengguna, username)
+                        return
+                    elif id_pesanan_bayar == '':
+                        print("\nID pesanan tidak boleh kosong")
+                        next()
+                        continue
+                    elif not id_pesanan_bayar.isdigit():
+                        print("\nID pesanan harus berupa angka")
+                        next()
+                        continue
+                    
+                    # Cek apakah pesanan ada dan milik user ini
+                    cursor.execute("""
+                    SELECT p.id_pesanan, p.status_pesanan 
+                    FROM pesanan p 
+                    WHERE p.id_pesanan = %s AND p.id_pengguna = %s
+                    """, (id_pesanan_bayar, id_pengguna))
+                    
+                    check_pesanan = cursor.fetchone()
+                    
+                    if check_pesanan is None:
+                        print("\nPesanan tidak ditemukan atau bukan milik Anda")
+                        next()
+                        continue                 
+                    if check_pesanan[1] != 'menunggu pembayaran':
+                        print(f"\nPesanan ini sudah berstatus '{check_pesanan[1]}', tidak bisa diubah")
+                        next()
+                        continue
+                    
+                    # UPDATE status pesanan menjadi diproses
+                    cursor.execute("""
+                    UPDATE pesanan 
+                    SET status_pesanan = %s 
+                    WHERE id_pesanan = %s
+                    """, ('diproses', id_pesanan_bayar))
+                    
+                    cursor.execute("""
+                    UPDATE laporan 
+                    SET status_akhir = %s 
+                    WHERE id_pesanan = %s
+                    """, ('diproses', id_pesanan_bayar))
+                    
+                    connection.commit()
+                    
+                    print(f"\nPesanan ID {id_pesanan_bayar} berhasil dibayar!")
+                    next()
+                    pembeli_cek_pesanan(id_pengguna, username)
+                    return                  
+            elif pilih == '2':
+                clear_all()
+                menu_pembeli(id_pengguna, username)
+                return
+            else:
+                print("\nPilihan tidak valid")
+                next()
+                clear_all()
+                menu_pembeli(id_pengguna, username)
+                return
         else:
             print(f'{username} tidak memiliki pesanan')
             next()
@@ -876,6 +995,7 @@ def pembeli_cek_pesanan(id_pengguna, username):
         if connection:
             connection.close()
         menu_pembeli(id_pengguna, username)
+        return
 
 def pembeli_riwayat_pesanan(id_pengguna, username):
     clear_all()
@@ -886,21 +1006,29 @@ def pembeli_riwayat_pesanan(id_pengguna, username):
     try: 
         cursor = connection.cursor()
 
-        cek_laporan = """SELECT p.tanggal_pesanan,
-                                l.nama_produk,
+        cek_laporan =  """SELECT l.tanggal_laporan,
+                                pr.nama_produk,
                                 dp.jumlah_pesanan,
-                                l.status_pesanan,
-                                p.metode_pembayaran
-                        FROM pesanan p
-                        JOIN laporan l ON p.id_pesanan = l.id_pesanan
+                                l.status_akhir,
+                                p.metode_pembayaran,
+                                CONCAT(j.nama_jalan, ', ', d.nama_desa, ', ', k.nama_kecamatan, ', ', kb.nama_kabupaten) AS alamat
+                        FROM laporan l
+                        JOIN pesanan p ON p.id_pesanan = l.id_pesanan
                         JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
-                        WHERE id_pengguna = %s AND l.status_pesanan IN ('selesai', 'dibatalkan')"""
+                        JOIN produk pr ON dp.id_produk = pr.id_produk
+                        JOIN pengguna pg ON p.id_pengguna = pg.id_pengguna
+                        JOIN jalan j ON pg.id_jalan = j.id_jalan
+                        JOIN desa d ON j.id_desa = d.id_desa
+                        JOIN kecamatan k ON d.id_kecamatan = k.id_kecamatan
+                        JOIN kabupaten kb ON k.id_kabupaten = kb.id_kabupaten
+                        WHERE p.id_pengguna = %s AND l.status_akhir IN ('selesai', 'dibatalkan')
+                        ORDER BY l.tanggal_laporan DESC"""
         cursor.execute(cek_laporan, (id_pengguna,))
         laporan = cursor.fetchall()
 
         if laporan:
             print(f'\n===== RIWAYAT PEMBELIAN {username} =====\n')
-            headers = ['Tanggal', 'Nama Produk', 'Jumlah Produk', 'Status Pesanan', 'Metode Bayar']
+            headers = ['Tanggal', 'Nama Produk', 'Jumlah Produk', 'Status Pesanan', 'Metode Bayar', 'Alamat']
             print(tabulate(laporan, headers=headers, tablefmt='fancy_grid'))
             back()
             menu_pembeli(id_pengguna, username)
@@ -1321,14 +1449,15 @@ def admin_cek_pesanan(id_pengguna, username):
             query = """SELECT p.id_pesanan,
                             p.tanggal_pesanan,
                             p.status_pesanan,
-                            p.nama_produk,
+                            pr.nama_produk,
                             dp.jumlah_pesanan,
                             p.metode_pembayaran,
                             pe.nama_pengguna,
                             CONCAT(j.nama_jalan, ', ', d.nama_desa, ', ', k.nama_kecamatan, ', ', kb.nama_kabupaten) AS alamat
                         FROM pesanan p
-                        JOIN pengguna pe ON p.id_pengguna = pe.id_pengguna
                         JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
+                        JOIN produk pr ON dp.id_produk = pr.id_produk
+                        JOIN pengguna pe ON p.id_pengguna = pe.id_pengguna
                         JOIN jalan j ON pe.id_jalan = j.id_jalan
                         JOIN desa d ON j.id_desa = d.id_desa
                         JOIN kecamatan k ON d.id_kecamatan = k.id_kecamatan
@@ -1393,7 +1522,7 @@ def admin_cek_pesanan(id_pengguna, username):
                 connection.commit()
 
                 update_laporan = """UPDATE laporan
-                                SET status_pesanan = %s
+                                SET status_akhir = %s
                                 WHERE id_pesanan = %s
                                 """
                 cursor.execute(update_laporan, (status_baru, id_pesanan))
