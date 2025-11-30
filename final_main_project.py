@@ -1047,6 +1047,7 @@ def pembeli_riwayat_pesanan(id_pengguna, username):
             connection.close()
         clear_all()
         menu_pembeli(id_pengguna, username)
+        return
 
 def menu_penjual(id_pengguna, username):
     clear_all()
@@ -1078,6 +1079,7 @@ Selamat Datang {username} Di Entropin!
     elif pilihan == "4":
         clear_all()
         main_menu()
+        return
     else:
         print("Pilihan tidak valid")
         back()
@@ -1309,6 +1311,7 @@ def penjual_kelola_produk(id_pengguna, username):
             connection.close()
         clear_all()
         penjual_kelola_produk(id_pengguna, username)
+        return
 
 def penjual_riwayat_penjualan(id_pengguna, username):
     connection = connect_db()
@@ -1357,6 +1360,7 @@ def penjual_riwayat_penjualan(id_pengguna, username):
             connection.close()
         clear_all()
         menu_penjual(id_pengguna, username)
+        return
 
 def penjual_lihat_pasar(id_pengguna, username):
     connection = connect_db()
@@ -1402,6 +1406,7 @@ def penjual_lihat_pasar(id_pengguna, username):
             connection.close()
         clear_all()
         penjual_lihat_pasar(id_pengguna, username)
+        return
 
 def menu_admin(id_pengguna, username):
     clear_all()
@@ -1765,6 +1770,7 @@ def admin_kelola_pasar(id_pengguna, username):
                 print("\nbelum ada data pasar")
                 next()
                 admin_kelola_pasar(id_pengguna, username)
+                return
 
         elif pilih == "4": #hapus data pasar
             clear_all()
@@ -1827,6 +1833,7 @@ def admin_kelola_pasar(id_pengguna, username):
             connection.close()
         clear_all()
         menu_admin()
+        return
 
 clear_all()
 print(r"""
