@@ -178,6 +178,16 @@ def register_penjual():
                 print('\nNomor telepon tidak boleh kurang dari 10 atau lebih dari 12')
                 next()
                 continue 
+            check_query = '''SELECT no_telp_pengguna
+                            FROM pengguna 
+                            WHERE no_telp_pengguna = %s'''
+            cursor.execute(check_query, (nomor_telepon,))
+            check_user = cursor.fetchone()
+                
+            if check_user:
+                print("\nNomor Telepon sudah digunakan! Silahkan gunakan nomor telepon lain.")
+                next()
+                continue
             else:
                 next()
                 break
@@ -366,6 +376,16 @@ def register_pembeli():
                 print('\nNomor telepon tidak boleh kurang dari 10 atau lebih dari 12')
                 next()
                 continue 
+            check_query = '''SELECT no_telp_pengguna
+                            FROM pengguna 
+                            WHERE no_telp_pengguna = %s'''
+            cursor.execute(check_query, (nomor_telepon,))
+            check_user = cursor.fetchone()
+                
+            if check_user:
+                print("\nNomor Telepon sudah digunakan! Silahkan gunakan nomor telepon lain.")
+                next()
+                continue
             else:
                 next()
                 break
