@@ -645,7 +645,7 @@ def buyproduk_entropin(id_pengguna, username):
                         print('\nID tidak boleh dikosongi')
                         next()
                         continue
-                    elif id_produk == 0 :
+                    elif id_produk == '0' :
                         input('\nTekan Enter Untuk Kembali Ke Menu Pembeli')
                         clear_all()
                         menu_pembeli(id_pengguna, username)
@@ -657,13 +657,27 @@ def buyproduk_entropin(id_pengguna, username):
                     else:
                         break
                 while True:
-                    jumlah_item = int(input('Masukkan Jumlah Yang Ingin Dibeli: '))
-                    if jumlah_item == '':
-                        print('\nJumlah Item tidak boleh dikosongi')
+                    try:
+                        jumlah_item = input('Masukkan Jumlah Yang Ingin Dibeli: ').strip()
+                        if jumlah_item == '':
+                            print('\nJumlah Item tidak boleh kosong')
+                            next()
+                            continue
+                        elif jumlah_item == '0':
+                            input('\nTekan Enter Untuk Kembali Ke Menu Pembeli')
+                            clear_all()
+                            menu_pembeli(id_pengguna, username)
+                            return
+                        jumlah_item = int(jumlah_item)
+                        if jumlah_item <= 0:
+                            print('\nJumlah item harus lebih dari 0')
+                            next()
+                            continue
+                        break
+                    except ValueError:
+                        print('\nJumlah item harus berupa angka')
                         next()
                         continue
-                    else:
-                        break
                     
                 cursor.execute("""SELECT nama_produk, harga_produk, stok_produk
                                 FROM produk
@@ -847,19 +861,33 @@ def keranjang_pembeli(id_pengguna, username):
             return
         elif pilih == '2':
             while True:
-                hapus_produk = int(input('Nomor Produk yang ingin dihapus : '))
-                hapus_produk_fix = hapus_produk - 1
-                if hapus_produk == '':
-                    print('\nTidak boleh kosong')
+                try:
+                    hapus_produk = input('Nomor Produk yang ingin dihapus (0 untuk kembali): ').strip()
+                    if hapus_produk == '':
+                        print('\nNomor produk tidak boleh kosong')
+                        next()
+                        continue
+                    elif hapus_produk == '0':
+                        clear_all()
+                        keranjang_pembeli(id_pengguna, username)
+                        return
+                    hapus_produk = int(hapus_produk)
+                    hapus_produk_fix = hapus_produk - 1
+                    if hapus_produk_fix >= 0 and hapus_produk_fix < len(keranjang):
+                        hapus = keranjang.pop(hapus_produk_fix)
+                        print(f'\n{hapus["nama_produk"]} dihapus dari keranjang')
+                        next()
+                        clear_all()
+                        keranjang_pembeli(id_pengguna, username)
+                        return
+                    else:
+                        print('\nNomor tidak valid')
+                        next()
+                        continue
+                except ValueError:
+                    print('\nNomor produk harus berupa angka')
                     next()
                     continue
-                elif hapus_produk_fix >= 0 and hapus_produk_fix < len(keranjang):
-                    hapus = keranjang.pop(hapus_produk_fix)
-                    print(f'\n{hapus['nama_produk']} dihapus dari keranjang')
-                    next()
-                    menu_pembeli(id_pengguna, username)
-                else:
-                    print('\nNomor tidak valid')
         elif pilih == '3':
             clear_all()
             buyproduk_entropin(id_pengguna, username)
@@ -1124,9 +1152,10 @@ def penjual_kelola_produk(id_pengguna, username):
                 p.harga_produk, 
                 k.jenis_produk, 
                 k.deskripsi_produk,
-                p.id_pengguna 
+                pe.nama_pengguna
             FROM
                 produk p
+            JOIN pengguna pe ON p.id_pengguna = pe.id_pengguna
             JOIN kategori_produk k ON p.id_kategori_produk = k.id_kategori_produk
             WHERE is_delete = FALSE AND stok_produk > 0
             """
@@ -1136,7 +1165,7 @@ def penjual_kelola_produk(id_pengguna, username):
             
             if produk:
                 print("\n===== PRODUK ENTROPIN =====\n")
-                headers = ["ID", "NAMA PRODUK", "STOK", "HARGA", "KATEGORI", "DESKRIPSI", "ID PENGGUNA"]
+                headers = ["ID", "NAMA PRODUK", "STOK", "HARGA", "KATEGORI", "DESKRIPSI", "PENJUAL"]
                 print(tabulate(produk, headers=headers, tablefmt="fancy_grid"))
                 input("\nTekan enter untuk kembali ke menu penjual")
                 clear_all()
@@ -1155,61 +1184,85 @@ def penjual_kelola_produk(id_pengguna, username):
                     next()
                     continue
                 elif nama_produk == "0":
-                    input("\nTekan enter untuk kembali ke menu penjual")
                     next()
                     cursor.close()
                     connection.close()
                     return menu_penjual(id_pengguna, username)
-                while True:
-                    harga_produk = int(input("Harga Produk: "))
+                else:
+                    break
+            while True:
+                try:
+                    harga_produk = input("Harga Produk (0 untuk kembali): ").strip()
                     if harga_produk == '':
                         print('\nHarga tidak boleh kosong')
                         next()
                         continue
-                    else:
-                        break
-                while True:
-                    stok_produk = int(input("Stok Produk: "))
+                    elif harga_produk == "0":
+                        next()
+                        cursor.close()
+                        connection.close()
+                        return penjual_kelola_produk(id_pengguna, username)
+                    harga_produk = int(harga_produk)
+                    if harga_produk <= 0:
+                        print('\nHarga harus lebih dari 0')
+                        next()
+                        continue
+                    break
+                except ValueError:
+                    print('\nHarga harus berupa angka')
+                    next()
+                    continue
+            while True:
+                try:
+                    stok_produk = input("Stok Produk: ").strip()
                     if stok_produk == '':
                         print('\nStok produk tidak boleh kosong')
                         next()
                         continue
-                    else:
-                        break
-                while True:
-                    print('''\n===== NAMA KATEGORI =====\n
-                            1. Hasil Panen
-                            2. Olahan Pertanian
-                            3. Bibit dan Benih
-                            4. Pupuk dan Nutrisi Tanaman
-                        ''')
-                    kategori = input("Kategori Produk: ").strip()
-                    if kategori == '':
-                        print('Kategori tidak boleh kosong')
+                    stok_produk = int(stok_produk)
+                    if stok_produk <= 0:
+                        print('\nStok harus lebih dari 0')
                         next()
                         continue
+                    break
+                except ValueError:
+                    print('\nStok harus berupa angka')
+                    next()
+                    continue
+            while True:
+                print('''\n===== NAMA KATEGORI =====\n
+                        1. Hasil Panen
+                        2. Olahan Pertanian
+                        3. Bibit dan Benih
+                        4. Pupuk dan Nutrisi Tanaman
+                    ''')
+                kategori = input("Kategori Produk: ").strip()
+                if kategori == '':
+                    print('Kategori tidak boleh kosong')
+                    next()
+                    continue
                     
-                    cursor.execute("SELECT id_kategori_produk FROM kategori_produk WHERE jenis_produk = %s ", (kategori,))
-                    nama_kategori = cursor.fetchone()
+                cursor.execute("SELECT id_kategori_produk FROM kategori_produk WHERE jenis_produk = %s ", (kategori,))
+                nama_kategori = cursor.fetchone()
 
-                    if nama_kategori is None:
-                        print('\nNama kategori tidak ada. Silahkan masukkan nama kategori dengan benar')
-                        next()
-                        continue
-                    elif nama_kategori is not None:
-                        id_kategori_produk = nama_kategori[0]
-                        next()
-                        break
+                if nama_kategori is None:
+                    print('\nNama kategori tidak ada. Silahkan masukkan nama kategori dengan benar')
+                    next()
+                    continue
+                elif nama_kategori is not None:
+                    id_kategori_produk = nama_kategori[0]
+                    next()
+                    break
 
-                tambah_produk = """
-                INSERT INTO produk (nama_produk, harga_produk, stok_produk, id_kategori_produk, is_delete, id_pengguna)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """
-                cursor.execute(tambah_produk, (nama_produk, harga_produk, stok_produk, id_kategori_produk, False, id_pengguna))
-                connection.commit()
-                print(f"Produk {nama_produk} berhasil ditambahkan")
-                next()
-                penjual_kelola_produk(id_pengguna, username)
+            tambah_produk = """
+            INSERT INTO produk (nama_produk, harga_produk, stok_produk, id_kategori_produk, is_delete, id_pengguna)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(tambah_produk, (nama_produk, harga_produk, stok_produk, id_kategori_produk, False, id_pengguna))
+            connection.commit()
+            print(f"Produk {nama_produk} berhasil ditambahkan")
+            next()
+            penjual_kelola_produk(id_pengguna, username)
         
         elif pilihan == "3": #penjual update produk
             clear_all()
@@ -1222,35 +1275,57 @@ def penjual_kelola_produk(id_pengguna, username):
                 print(tabulate(produk, headers=header, tablefmt="fancy_grid"))
                 
                 while True:
-                    id_produk = int(input("ID Produk yang akan diupdate (0 untuk kembali): "))
-                    if id_produk == "":
-                        print("ID tidak boleh kosong")
+                    try:
+                        id_produk = input("ID Produk yang akan diupdate (0 untuk kembali): ").strip()
+                        if id_produk == '':
+                            print("ID tidak boleh kosong")
+                            next()
+                            continue
+                        elif id_produk == "0":
+                            next()
+                            cursor.close()
+                            connection.close()
+                            return penjual_kelola_produk(id_pengguna, username)
+                        id_produk = int(id_produk)
+                        break
+                    except ValueError:
+                        print('\nID produk harus berupa angka')
                         next()
                         continue
-                    elif id_produk == "0":
-                        input("\nTekan enter untuk kembali ke menu penjual")
-                        next()
-                        cursor.close()
-                        connection.close()
-                        return menu_penjual(id_pengguna, username)
-                    else:
-                        break
                 while True:
-                    harga = int(input("Harga baru: "))
-                    if harga == "":
-                        print("Harga tidak boleh kosong")
+                    try:
+                        harga = input("Harga baru: ").strip()
+                        if harga == '':
+                            print("Harga tidak boleh kosong")
+                            next()
+                            continue
+                        harga = int(harga)
+                        if harga <= 0:
+                            print('\nHarga harus lebih dari 0')
+                            next()
+                            continue
+                        break
+                    except ValueError:
+                        print('\nHarga harus berupa angka')
                         next()
                         continue
-                    else:
-                        break
                 while True:
-                    stok = int(input("Stok baru: "))
-                    if stok == "":
-                        print("Stok tidak boleh kosong")
+                    try:
+                        stok = input("Stok baru: ").strip()
+                        if stok == '':
+                            print("Stok tidak boleh kosong")
+                            next()
+                            continue
+                        stok = int(stok)
+                        if stok <= 0:
+                            print('\nStok harus lebih dari 0')
+                            next()
+                            continue
+                        break
+                    except ValueError:
+                        print('\nStok harus berupa angka')
                         next()
                         continue
-                    else:
-                        break
                 
                 query = "UPDATE produk SET harga_produk = %s, stok_produk = %s WHERE id_produk = %s"
                 cursor.execute(query, (harga, stok, id_produk))
@@ -1270,23 +1345,27 @@ def penjual_kelola_produk(id_pengguna, username):
             produk = cursor.fetchall()
             
             if produk:
-                headers = ["ID", "Nama", "Harga", "Stok", ]
+                headers = ["ID", "Nama", "Harga", "Stok"]
                 print(tabulate(produk, headers=headers, tablefmt="fancy_grid"))
                 
                 while True:
-                    id_produk = int(input("ID Produk yang akan dihapus (0 untuk kembali): "))
-                    if id_produk == "":
-                        print("ID tidak boleh kosong")
+                    try:
+                        id_produk = input("ID Produk yang akan dihapus (0 untuk kembali): ").strip()
+                        if id_produk == '':
+                            print("ID tidak boleh kosong")
+                            next()
+                            continue
+                        elif id_produk == "0":
+                            next()
+                            cursor.close()
+                            connection.close()
+                            return penjual_kelola_produk(id_pengguna, username)
+                        id_produk = int(id_produk)
+                        break
+                    except ValueError:
+                        print('\nID produk harus berupa angka')
                         next()
                         continue
-                    elif id_produk == "0":
-                        input("\nTekan enter untuk kembali ke menu penjual")
-                        next()
-                        cursor.close()
-                        connection.close()
-                        return menu_penjual(id_pengguna, username)
-                    else:
-                        break
 
                 query = "UPDATE produk SET is_delete = TRUE WHERE id_produk = %s"
                 cursor.execute(query, (id_produk,))
@@ -1599,8 +1678,8 @@ def admin_kelola_pasar(id_pengguna, username):
             clear_all()
             print("ketik 0 untuk kembali ke menu sebelumnya")
             while True:
-                nama_produk = input("Masukan nama produk: ").title()
-                if nama_produk == '':
+                nama_produk = input("Masukan nama produk: ")
+                if nama_produk == '' or nama_produk.isspace():
                     print('\nNama produk tidak boleh kosong')
                     next()
                     continue
@@ -1612,56 +1691,71 @@ def admin_kelola_pasar(id_pengguna, username):
                 else:
                     break
             while True:
-                harga_minim = input("harga minimal produk: ")
-                if harga_minim == '':
-                    print('\nHarga minimal tidak boleh kosong')
-                    next()
-                    continue
-                elif harga_minim == "0":
-                    next()
-                    cursor.close()
-                    connection.close()
-                    return admin_kelola_pasar(id_pengguna, username)
-                elif not harga_minim.isdigit():
-                    print('\nHarga minimal harus berupa angka')
-                    next()
-                    continue
-                else:
+                try:
+                    harga_minim = input("harga minimal produk: ").strip()
+                    if harga_minim == '':
+                        print('\nHarga minimal tidak boleh kosong')
+                        next()
+                        continue
+                    elif harga_minim == "0":
+                        next()
+                        cursor.close()
+                        connection.close()
+                        return admin_kelola_pasar(id_pengguna, username)
+                    harga_minim = int(harga_minim)
+                    if harga_minim <= 0:
+                        print('\nHarga harus lebih dari 0')
+                        next()
+                        continue
                     break
+                except ValueError:
+                    print('\nHarga harus berupa angka')
+                    next()
+                    continue
             while True:
-                harga_maksimal = input("harga max produk: ")
-                if harga_maksimal == '':
-                    print('\nHarga maksimal tidak boleh kosong')
-                    next()
-                    continue
-                elif harga_maksimal == "0":
-                    next()
-                    cursor.close()
-                    connection.close()
-                    return admin_kelola_pasar(id_pengguna, username)
-                elif not harga_maksimal.isdigit():
-                    print('\nHarga maksimal harus berupa angka')
-                    next()
-                    continue
-                else:
+                try:
+                    harga_maksimal = input("harga max produk: ").strip()
+                    if harga_maksimal == '':
+                        print('\nHarga maksimal tidak boleh kosong')
+                        next()
+                        continue
+                    elif harga_maksimal == "0":
+                        next()
+                        cursor.close()
+                        connection.close()
+                        return admin_kelola_pasar(id_pengguna, username)
+                    harga_maksimal = int(harga_maksimal)
+                    if harga_maksimal <= 0:
+                        print('\nHarga harus lebih dari 0')
+                        next()
+                        continue
                     break
+                except ValueError:
+                    print('\nHarga harus berupa angka')
+                    next()
+                    continue
             while True:
-                harga_rata_rata = input("harga rata-rata produk: ")
-                if harga_rata_rata == '':
-                    print('\nHarga rata-rata tidak boleh kosong')
-                    next()
-                    continue
-                elif harga_rata_rata == "0":
-                    next()
-                    cursor.close()
-                    connection.close()
-                    return admin_kelola_pasar(id_pengguna, username)
-                elif not harga_rata_rata.isdigit():
-                    print('\nHarga rata-rata harus berupa angka')
-                    next()
-                    continue
-                else:
+                try:
+                    harga_rata_rata = input("harga rata-rata produk: ").strip()
+                    if harga_rata_rata == '':
+                        print('\nHarga rata-rata tidak boleh kosong')
+                        next()
+                        continue
+                    elif harga_rata_rata == "0":
+                        next()
+                        cursor.close()
+                        connection.close()
+                        return admin_kelola_pasar(id_pengguna, username)
+                    harga_rata_rata = int(harga_rata_rata)
+                    if harga_rata_rata <= 0:
+                        print('\nHarga harus lebih dari 0')
+                        next()
+                        continue
                     break
+                except ValueError:
+                    print('\nHarga harus berupa angka')
+                    next()
+                    continue
             while True:
                 lokasi_pasar = input("lokasi pasar: ").title()
                 if lokasi_pasar == '':
@@ -1711,63 +1805,95 @@ def admin_kelola_pasar(id_pengguna, username):
 
                 print("Ketik 0 untuk kembali ke menu sebelumnya")
                 while True:
-                    id_pasar = int(input("masukkan id pasar yang ingin diperbarui: "))
-                    if id_pasar == "":
-                        print("\nID pasar tidak boleh kosong")
-                        next()
-                        continue
-                    elif id_pasar == 0:
-                        back()
-                        cursor.close()
-                        connection.close()
-                        return admin_kelola_pasar(id_pengguna, username)
-                    else:
+                    try:
+                        id_pasar = input("masukkan id pasar yang ingin diperbarui: ").strip()
+                        if id_pasar == '':
+                            print("\nID pasar tidak boleh kosong")
+                            next()
+                            continue
+                        elif id_pasar == "0":
+                            back()
+                            cursor.close()
+                            connection.close()
+                            return admin_kelola_pasar(id_pengguna, username)
+                        id_pasar = int(id_pasar)
                         break
-                while True:
-                    harga_minim = int(input("Masukkan harga minimal: "))
-                    if harga_minim == "":
-                        print('\nHarga minimal tidak boleh kosong')
+                    except ValueError:
+                        print('\nID pasar harus berupa angka')
                         next()
-                        continue
-                    elif harga_minim == 0:
-                        back()
-                        cursor.close()
-                        connection.close()
-                        return admin_kelola_pasar(id_pengguna, username)
-                    else:
-                        break  
+                        continue              
                 while True:
-                    harga_maksimal = int(input("Masukkan harga maksimal: "))
-                    if harga_maksimal == "":
-                        print('\nHarga maksimal tidak boleh kosong')
-                        next()
-                        continue
-                    elif harga_maksimal == 0:
-                        back()
-                        cursor.close()
-                        connection.close()
-                        return admin_kelola_pasar(id_pengguna, username)
-                    else:
+                    try:
+                        harga_minim = input("Masukkan harga minimal: ").strip()
+                        if harga_minim == '':
+                            print('\nHarga minimal tidak boleh kosong')
+                            next()
+                            continue
+                        elif harga_minim == "0":
+                            back()
+                            cursor.close()
+                            connection.close()
+                            return admin_kelola_pasar(id_pengguna, username)
+                        harga_minim = int(harga_minim)
+                        if harga_minim <= 0:
+                            print('\nHarga harus lebih dari 0')
+                            next()
+                            continue
                         break
+                    except ValueError:
+                        print('\nHarga harus berupa angka')
+                        next()
+                        continue 
                 while True:
-                    harga_rata_rata = int(input("Masukkan harga rata-rata: "))
-                    if harga_rata_rata == "":
-                        print('\nHarga rata-rata tidak boleh kosong')
+                    try:
+                        harga_maksimal = input("Masukkan harga maksimal: ").strip()
+                        if harga_maksimal == '':
+                            print('\nHarga maksimal tidak boleh kosong')
+                            next()
+                            continue
+                        elif harga_maksimal == "0":
+                            back()
+                            cursor.close()
+                            connection.close()
+                            return admin_kelola_pasar(id_pengguna, username)
+                        harga_maksimal = int(harga_maksimal)
+                        if harga_maksimal <= 0:
+                            print('\nHarga harus lebih dari 0')
+                            next()
+                            continue
+                        break
+                    except ValueError:
+                        print('\nHarga harus berupa angka')
                         next()
                         continue
-                    elif harga_rata_rata == 0:
-                        back()
-                        cursor.close()
-                        connection.close()
-                        return admin_kelola_pasar(id_pengguna, username)
-                    else:
+                while True:
+                    try:
+                        harga_rata_rata = input("Masukkan harga rata-rata: ").strip()
+                        if harga_rata_rata == '':
+                            print('\nHarga rata-rata tidak boleh kosong')
+                            next()
+                            continue
+                        elif harga_rata_rata == "0":
+                            back()
+                            cursor.close()
+                            connection.close()
+                            return admin_kelola_pasar(id_pengguna, username)
+                        harga_rata_rata = int(harga_rata_rata)
+                        if harga_rata_rata <= 0:
+                            print('\nHarga harus lebih dari 0')
+                            next()
+                            continue
                         break
+                    except ValueError:
+                        print('\nHarga harus berupa angka')
+                        next()
+                        continue
+                
                 query = """ UPDATE kelola_pasar
                             SET harga_min_kelola_pasar = %s, 
                                 harga_max_kelola_pasar = %s,
                                 harga_rata_kelola_pasar = %s 
-                            WHERE id_kelola_pasar = %s
-                            ORDER BY id_kelola_pasar"""
+                            WHERE id_kelola_pasar = %s"""
                 cursor.execute(query,(harga_minim, harga_maksimal, harga_rata_rata, id_pasar))
                 connection.commit()
 
