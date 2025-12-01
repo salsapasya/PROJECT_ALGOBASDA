@@ -1,0 +1,2045 @@
+import psycopg2                      # library untuk koneksi ke PostgreSQL
+from psycopg2 import Error           # untuk menangani error dari psycopg2
+from tabulate import tabulate        # untuk menampilkan data dalam bentuk tabel
+import os                            # untuk akses perintah sistem (cls/clear)
+from datetime import date            # untuk mengambil tanggal hari ini
+
+
+def connect_db():  # fungsi untuk membuat koneksi ke database
+    try:  # mencoba melakukan koneksi ke database
+        connection = psycopg2.connect(
+            user="postgres",           # username database
+            password="sabila.19",      # password database
+            host="127.0.0.1",          # host database (lokal)
+            port="5432",               # port default PostgreSQL
+            database="entropin end game"  # nama database yang digunakan
+        )
+        return connection             # mengembalikan objek koneksi jika berhasil
+    except Error as error:            # jika terjadi error saat koneksi
+        print("Terjadi kesalahan, gagal terkoneksi dengan database", error)
+
+
+def clear_all():  # fungsi untuk membersihkan layar terminal
+    os.system('cls')  # perintah clear screen di Windows (cmd)
+
+
+def next():  # fungsi jeda "lanjut"
+    lanjut = input("Silahkan Tekan Enter Untuk Lanjut")  # menunggu user menekan enter
+    print(lanjut)  # menampilkan input (sebenarnya selalu kosong kalau hanya enter)
+    if lanjut == '':  # jika hanya enter
+        clear_all()   # bersihkan layar
+    return
+
+
+def back():  # fungsi jeda "kembali"
+    kembali = input("Silahkan Tekan Enter Untuk Kembali")  # menunggu user menekan enter
+    print(kembali)
+    if kembali == '':  # jika hanya enter
+        clear_all()    # bersihkan layar
+    return
+
+
+def main_menu():  # fungsi untuk menampilkan menu utama
+    print(r"""                                                
+ __  __                    _   _ _                        
+|  \/  | ___ _ __  _   _  | | | | |_ __ _ _ __ ___   __ _ 
+| |\/| |/ _ \ '_ \| | | | | | | | __/ _` | '_ ` _ \ / _` |
+| |  | |  __/ | | | |_| | | |_| | || (_| | | | | | | (_| |
+|_|  |_|\___|_| |_|\__,_|  \___/ \__\__,_|_| |_| |_|\__,_|
+    
+1. Register
+2. Login
+3. Logout Sistem
+    """)
+
+    select_menu = input("Pilih Main Menu (1-3) : ")  # input pilihan menu utama
+    if select_menu == "1":           # jika pilih register
+        clear_all()
+        register()
+    elif select_menu == "2":         # jika pilih login
+        clear_all()
+        login()
+    elif select_menu == "3":         # jika pilih keluar sistem
+        clear_all()
+        return
+    else:                            # jika input tidak valid
+        print("Pilihan Tidak Ditemukan")
+        clear_all()
+        main_menu()                  # panggil ulang main menu
+
+
+def register():  # fungsi untuk memilih tipe register (penjual/pembeli)
+    print('''=== Silahkan memilih tipe pelaku ===
+        1. Penjual
+        2. Pembeli
+        3. Kembali ke Main Menu
+''')
+    tipe_pelaku = input("Pilih (1-3) : ")  # input pilihan tipe pelaku
+    while True:  # loop untuk validasi pilihan
+        if tipe_pelaku == "1":       # jika pilih penjual
+            clear_all()
+            register_penjual()
+        elif tipe_pelaku == "2":     # jika pilih pembeli
+            clear_all()
+            register_pembeli()
+        elif tipe_pelaku == "3":     # jika kembali ke main menu
+            clear_all()
+            main_menu()
+        else:                        # jika input tidak valid
+            print("Pilihan tidak tersedia")
+            register()
+        return
+
+
+def register_penjual():  # fungsi untuk registrasi penjual
+    clear_all()
+    connection = connect_db()  # buka koneksi ke database
+    if connection is None:     # jika koneksi gagal
+        print("Koneksi tidak berhasil")
+        return
+
+    try:
+        cursor = connection.cursor()  # membuat cursor untuk eksekusi query
+
+        print("=== REGISTER PENJUAL ===\n")
+        print("Ketik 'exit' Untuk kembali ke Main Menu\n")
+
+        # ===== INPUT NAMA LENGKAP =====
+        while True:  # loop sampai nama valid
+            nama = input('Nama Lengkap : ').strip()  # input nama tanpa spasi di depan/belakang
+            if nama == '':                           # nama tidak boleh kosong
+                print('\nNama tidak boleh kosong')
+                next()
+                continue
+            if nama.isdigit():                       # nama tidak boleh hanya angka
+                print('\nNama tidak boleh angka')
+                next()
+                continue
+            elif nama == "exit":                     # kembali ke main menu
+                input("\nTekan enter untuk kembali ke menu awal")
+                next()
+                cursor.close()
+                connection.close()
+                return main_menu()
+            else:
+                next()
+                break
+
+        # ===== INPUT NAMA JALAN (DARI TABEL JALAN) =====
+        while True:
+            print(''' ===== DATA NAMA JALAN =====
+                1. jalan kalimantan
+                2. jalan lumba-lumba
+                3. jalan sudirman
+                4. jalan gajah mada
+                4. jalan sumatra
+                5. jalan tidar
+                6. jalan mastrip
+                7. jalan jawa
+                8. jalan brawijaya
+                9. jalan P.B soedirman
+                10. jalan karimata
+                11. jalan kaliurang
+                12. jalan kertanegara
+                13. jalan prabuwangi
+                ''')
+            jalan = input('Nama Jalan(ct. jalan jawa) : ').strip()  # input nama jalan
+            if jalan == '':                                        # tidak boleh kosong
+                print('\nNama jalan tidak boleh kosong')
+                next()
+                continue
+            elif jalan == "exit":                                  # kembali ke main menu
+                input("\nTekan enter untuk kembali ke menu awal")
+                next()
+                cursor.close()
+                connection.close()
+                return main_menu()
+
+            # query untuk cek id_jalan berdasarkan nama_jalan
+            cursor.execute("SELECT id_jalan FROM jalan WHERE nama_jalan = %s", (jalan,))
+            data_jalan = cursor.fetchone()  # ambil satu baris hasil query
+            if data_jalan is None:          # jika nama jalan tidak ditemukan
+                print('\nNama jalan tidak ditemukan. Harap masukkan nama jalan sesuai data')
+                next()
+                continue
+            elif data_jalan is not None:    # jika ditemukan, simpan id_jalan
+                id_jalan = data_jalan[0]
+                next()
+                break
+
+        # ===== INPUT NOMOR TELEPON =====
+        while True:
+            nomor_telepon = input('Nomor Telepon : ').strip()  # input no telp
+            if nomor_telepon == '':                            # tidak boleh kosong
+                print('\nNomor telepon tidak boleh kosong')
+                next()
+                continue
+            elif nomor_telepon == "exit":                      # kembali ke menu
+                input("\nTekan enter untuk kembali ke menu awal")
+                next()
+                cursor.close()
+                connection.close()
+                return main_menu()
+            elif not nomor_telepon.isdigit():                  # harus angka
+                print('\nNomor telepon harus angka')
+                next()
+                continue
+            elif len(nomor_telepon) < 10 or len(nomor_telepon) > 12:  # validasi panjang no telp
+                print('\nNomor telepon tidak boleh kurang dari 10 atau lebih dari 12')
+                next()
+                continue
+
+            # cek apakah nomor telepon sudah digunakan
+            check_query = '''SELECT no_telp_pengguna
+                              FROM pengguna 
+                              WHERE no_telp_pengguna = %s'''
+            cursor.execute(check_query, (nomor_telepon,))
+            check_user = cursor.fetchone()  # ambil hasil cek no telp
+
+            if check_user:  # jika sudah ada di database
+                print("\nNomor Telepon sudah digunakan! Silahkan gunakan nomor telepon lain.")
+                next()
+                continue
+            else:
+                next()
+                break
+
+        # ===== INPUT USERNAME =====
+        while True:
+            username = input('Username (5-15 karakter) : ').strip()  # input username
+            if username == '':                                       # tidak boleh kosong
+                print('\nUsername tidak boleh kosong')
+                next()
+                continue
+            elif username == "exit":                                 # kembali ke menu
+                input("\nTekan enter untuk kembali ke menu awal")
+                next()
+                cursor.close()
+                connection.close()
+                return main_menu()
+            elif len(username) < 5:                                  # minimal 5 karakter
+                print('\nUsername terlalu pendek')
+                next()
+                continue
+            elif len(username) > 15:                                 # maksimal 15 karakter
+                print('\nUsername terlalu panjang')
+                next()
+                continue
+
+            # cek apakah username sudah dipakai
+            check_query = '''SELECT username_pengguna
+                              FROM pengguna 
+                              WHERE username_pengguna = %s'''
+            cursor.execute(check_query, (username,))
+            check_user = cursor.fetchone()
+
+            if check_user:  # jika username sudah digunakan
+                print("\nUsername sudah digunakan! Silahkan gunakan username lain.")
+                next()
+                continue
+            else:
+                next()
+                break
+
+        # ===== INPUT PASSWORD =====
+        while True:
+            password = input('Password (5-15 karakter) : ').strip()  # input password
+            if password == '':                                      # tidak boleh kosong
+                print('\nPassword tidak boleh kosong')
+                continue
+            elif password == "exit":                                # kembali ke menu
+                input("\nTekan enter untuk kembali ke menu awal")
+                next()
+                cursor.close()
+                connection.close()
+                return main_menu()
+            elif len(password) < 5:                                 # minimal 5 karakter
+                print('\nPassword terlalu pendek')
+                continue
+            elif len(password) > 15:                                # maksimal 15 karakter
+                print('\nPassword terlalu panjang')
+                continue
+
+            # cek apakah password sudah pernah digunakan (unik)
+            check_query = '''SELECT password_pengguna
+                              FROM pengguna 
+                              WHERE password_pengguna = %s'''
+            cursor.execute(check_query, (password,))
+            check_pw = cursor.fetchone()
+
+            if check_pw:  # jika password sudah dipakai user lain
+                print("\nPassword sudah digunakan! Silahkan gunakan password lain.")
+                next()
+                continue
+            else:
+                next()
+                break
+
+        role = "penjual"  # set role sebagai penjual
+
+        # ===== QUERY INSERT DATA PENJUAL BARU =====
+        insert_query = """
+        INSERT INTO pengguna (nama_pengguna, no_telp_pengguna, username_pengguna, password_pengguna, role, id_jalan)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        cursor.execute(insert_query, (nama, nomor_telepon, username, password, role, id_jalan))  # eksekusi insert
+        connection.commit()  # simpan perubahan ke database
+
+        print("\nRegistrasi Penjual Berhasil!")
+        print(f"Selamat datang, {nama}!")
+
+        input("\nTekan Enter untuk kembali ke Main Menu...")
+        cursor.close()      # tutup cursor
+        connection.close()  # tutup koneksi
+        clear_all()
+        main_menu()         # kembali ke menu utama
+        return
+
+    except Error as error:  # jika terjadi error di blok try
+        print(f"\nTerjadi kesalahan saat registrasi: {error}")
+        input("Tekan Enter untuk melanjutkan...")
+        if connection:
+            connection.close()  # pastikan koneksi ditutup jika error
+        clear_all()
+        register_penjual()      # ulangi proses register penjual
+        return
+
+
+def register_pembeli():  # fungsi untuk registrasi pembeli
+    clear_all()
+    connection = connect_db()  # buka koneksi database
+    if connection is None:     # jika koneksi gagal
+        print("Koneksi tidak berhasil")
+        return
+
+    try:
+        cursor = connection.cursor()  # cursor untuk eksekusi query
+
+        print("=== REGISTER PEMBELI ===\n")
+        print("Ketik 'exit' Untuk kembali ke Main Menu\n")
+
+        # ===== INPUT NAMA LENGKAP =====
+        while True:
+            nama = input('Nama Lengkap : ').strip()
+            if nama == '':
+                print('\nNama tidak boleh kosong')
+                next()
+                continue
+            if nama.isdigit():
+                print('\nNama tidak boleh angka')
+                next()
+                continue
+            elif nama == "exit":
+                input("\nTekan enter untuk kembali ke menu awal")
+                next()
+                cursor.close()
+                connection.close()
+                return main_menu()
+            else:
+                next()
+                break
+
+        # ===== INPUT NAMA JALAN =====
+        while True:
+            print(''' ===== DATA NAMA JALAN =====
+                1. jalan kalimantan
+                2. jalan lumba-lumba
+                3. jalan sudirman
+                4. jalan gajah mada
+                5. jalan sumatra
+                6. jalan tidar
+                7. jalan mastrip
+                8. jalan jawa
+                9. jalan brawijaya
+                10. jalan P.B soedirman
+                11. jalan karimata
+                12. jalan kaliurang
+                13. jalan kertanegara
+                14. jalan prabuwangi
+                ''')
+            jalan = input('Nama Jalan(ct. jalan jawa) : ').strip()
+            if jalan == '':
+                print('\nNama jalan tidak boleh kosong')
+                next()
+                continue
+            elif jalan == "exit":
+                input("\nTekan enter untuk kembali ke menu awal")
+                clear_all()
+                cursor.close()
+                connection.close()
+                return main_menu()
+
+            # cek id_jalan berdasarkan nama_jalan
+            cursor.execute("SELECT id_jalan FROM jalan WHERE nama_jalan = %s", (jalan,))
+            data_jalan = cursor.fetchone()
+            if data_jalan is None:
+                print('\nNama jalan tidak ditemukan. Harap masukkan nama jalan sesuai data')
+                next()
+                continue
+            elif data_jalan is not None:
+                id_jalan = data_jalan[0]
+                next()
+                break
+            else:
+                next()
+                break
+
+        # ===== INPUT NOMOR TELEPON =====
+        while True:
+            nomor_telepon = input('Nomor Telepon : ').strip()
+            if nomor_telepon == '':
+                print('\nNomor telepon tidak boleh kosong')
+                next()
+                continue
+            elif nomor_telepon == "exit":
+                input("\nTekan enter untuk kembali ke menu awal")
+                clear_all()
+                cursor.close()
+                connection.close()
+                return main_menu()
+            elif not nomor_telepon.isdigit():
+                print('\nNomor telepon harus angka')
+                next()
+                continue
+            elif len(nomor_telepon) < 10 or len(nomor_telepon) > 12:
+                print('\nNomor telepon tidak boleh kurang dari 10 atau lebih dari 12')
+                next()
+                continue
+
+            # cek no telp di tabel pengguna
+            check_query = '''SELECT no_telp_pengguna
+                             FROM pengguna 
+                             WHERE no_telp_pengguna = %s'''
+            cursor.execute(check_query, (nomor_telepon,))
+            check_user = cursor.fetchone()
+
+            if check_user:
+                print("\nNomor Telepon sudah digunakan! Silahkan gunakan nomor telepon lain.")
+                next()
+                continue
+            else:
+                next()
+                break
+
+        # ===== INPUT USERNAME =====
+        while True:
+            username = input('Username (5-15 karakter) : ').strip()
+            if username == '':
+                print('\nUsername tidak boleh kosong')
+                next()
+                continue
+            elif username == "exit":
+                input("\nTekan enter untuk kembali ke menu awal")
+                clear_all()
+                cursor.close()
+                connection.close()
+                return main_menu()
+            elif len(username) < 5:
+                print('\nUsername terlalu pendek')
+                next()
+                continue
+            elif len(username) > 15:
+                print('\nUsername terlalu panjang')
+                next()
+                continue
+
+            # cek username di database
+            check_query = '''SELECT username_pengguna
+                             FROM pengguna 
+                             WHERE username_pengguna = %s'''
+            cursor.execute(check_query, (username,))
+            check_user = cursor.fetchone()
+
+            if check_user:
+                print("\nUsername sudah digunakan! Silahkan gunakan username lain.")
+                next()
+                continue
+            else:
+                next()
+                break
+
+        # ===== INPUT PASSWORD =====
+        while True:
+            password = input('Password (5-15 karakter) : ').strip()
+            if password == '':
+                print('\nPassword tidak boleh kosong')
+                continue
+            elif password == "exit":
+                input("\nTekan enter untuk kembali ke menu awal")
+                clear_all()
+                cursor.close()
+                connection.close()
+                return main_menu()
+            elif len(password) < 5:
+                print('\nPassword terlalu pendek')
+                continue
+            elif len(password) > 15:
+                print('\nPassword terlalu panjang')
+                continue
+
+            # cek password unik
+            check_query = '''SELECT password_pengguna
+                             FROM pengguna 
+                             WHERE password_pengguna = %s'''
+            cursor.execute(check_query, (password,))
+            check_pw = cursor.fetchone()
+
+            if check_pw:
+                print("\nPassword sudah digunakan! Silahkan gunakan password lain.")
+                next()
+                continue
+            else:
+                next()
+                break
+
+        role = "pembeli"  # set role sebagai pembeli
+
+        # ===== INSERT DATA PEMBELI BARU =====
+        insert_query = """
+        INSERT INTO pengguna (nama_pengguna, no_telp_pengguna, username_pengguna, password_pengguna, role, id_jalan)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        cursor.execute(insert_query, (nama, nomor_telepon, username, password, role, id_jalan))
+        connection.commit()
+
+        print("\nRegistrasi Pembeli Berhasil!")
+        print(f"Selamat datang, {nama}!")
+
+        input("\nTekan Enter untuk kembali ke Main Menu...")
+        cursor.close()
+        connection.close()
+        clear_all()
+        main_menu()
+        return
+
+    except Error as error:  # penanganan error proses register
+        print(f"\nTerjadi kesalahan saat registrasi: {error}")
+        input("Tekan Enter untuk melanjutkan...")
+        if connection:
+            connection.close()
+        clear_all()
+        register_pembeli()  # ulangi proses register pembeli
+        return
+
+
+def login():  # fungsi untuk login pengguna
+    clear_all()
+    connection = connect_db()  # koneksi database
+    if connection is None:
+        print("Koneksi tidak berhasil")
+        return
+
+    try:
+        cursor = connection.cursor()  # cursor untuk query
+
+        print("=== LOGIN SISTEM ===\n")
+        print("Ketik 0 Untuk kembali ke Main Menu\n")
+
+        # ===== INPUT USERNAME =====
+        while True:
+            username = input("Masukkan Username : ")
+            if username == "0":  # kembali ke main menu
+                input("\nTekan enter untuk kembali ke menu awal")
+                clear_all()
+                cursor.close()
+                connection.close()
+                return main_menu()
+            else:
+                break
+
+        # ===== INPUT PASSWORD =====
+        while True:
+            password = input("Masukkan Password : ")
+            if password == "0":  # kembali ke main menu
+                input("\nTekan enter untuk kembali ke menu awal")
+                clear_all()
+                cursor.close()
+                connection.close()
+                return main_menu()
+            else:
+                break
+
+        # ===== CEK USER DI DATABASE =====
+        check_query = """
+        SELECT id_pengguna, nama_pengguna, role 
+        FROM pengguna 
+        WHERE username_pengguna = %s AND password_pengguna = %s
+        """
+        cursor.execute(check_query, (username, password))
+        check_user = cursor.fetchone()  # ambil hasil
+
+        if check_user:  # jika user ditemukan
+            id_pengguna = check_user[0]  # id user
+            nama_pengguna = check_user[1]  # nama user
+            role = check_user[2]  # role user (admin/penjual/pembeli)
+            print(f"\nLogin Berhasil!")
+            print(f"Selamat datang {nama_pengguna}")
+            print(f"Sebagai {role}")
+
+            next()
+            cursor.close()
+            connection.close()
+            clear_all()
+
+            # arahkan ke menu sesuai role
+            if role == "admin":
+                menu_admin(id_pengguna, username)
+            elif role == "penjual":
+                menu_penjual(id_pengguna, username)
+            elif role == "pembeli":
+                menu_pembeli(id_pengguna, username)
+            else:
+                print("Role tidak dikenali!")
+                login()
+                return
+        else:  # jika username/password salah
+            clear_all()
+            print("\nUsername atau Password salah!")
+            input("Tekan Enter untuk mencoba lagi...")
+            cursor.close()
+            connection.close()
+            clear_all()
+            login()  # ulangi login
+            return
+
+    except Error as error:  # error saat proses login
+        print(f"\nTerjadi kesalahan saat login: {error}")
+        input("Tekan Enter untuk melanjutkan...")
+        if connection:
+            connection.close()
+        clear_all()
+        login()
+        return
+
+
+def menu_pembeli(id_pengguna, username):  # menu utama untuk pembeli
+    clear_all()
+    print(f'''
+ __  __                    ____                _          _ _ 
+|  \/  | ___ _ __  _   _  |  _ \ ___ _ __ ___ | |__   ___| (_)
+| |\/| |/ _ \ '_ \| | | | | |_) / _ \ '_ ` _ \| '_ \ / _ \ | |
+| |  | |  __/ | | | |_| | |  __/  __/ | | | | | |_) |  __/ | |
+|_|  |_|\___|_| |_|\__,_| |_|   \___|_| |_| |_|_.__/ \___|_|_|
+
+Selamat Datang {username} Di Entropin!
+
+1. Daftar Produk Entropin
+2. Keranjang dan Checkout
+3. Cek Pesanan
+4. Riwayat Pesanan
+5. Logout
+''')
+    pilih = input("Pilih Menu (1-5): ")  # input menu pembeli
+
+    if pilih == '1':   # lihat dan beli produk
+        clear_all()
+        buyproduk_entropin(id_pengguna, username)
+    elif pilih == '2':  # lihat keranjang
+        clear_all()
+        keranjang_pembeli(id_pengguna, username)
+    elif pilih == '3':  # cek pesanan aktif
+        clear_all()
+        pembeli_cek_pesanan(id_pengguna, username)
+    elif pilih == '4':  # riwayat pesanan
+        clear_all()
+        pembeli_riwayat_pesanan(id_pengguna, username)
+    elif pilih == '5':  # logout (kembali ke main menu)
+        clear_all()
+        main_menu()
+        return
+    else:               # input tidak valid
+        print('''
+            Pilihan Tidak Valid
+            Tekan Enter Untuk Kembali Ke Menu''')
+        clear_all()
+        menu_pembeli(id_pengguna, username)
+        return
+
+
+# dictionary global untuk menyimpan keranjang per user
+keranjang_entropin = {}  # key = id_pengguna, value = list item di keranjang
+
+
+def buyproduk_entropin(id_pengguna, username):  # fungsi untuk menampilkan daftar produk & menambah ke keranjang
+    clear_all()
+    connection = connect_db()
+    if connection is None:
+        print("Koneksi tidak berhasil")
+        return
+
+    try:
+        cursor = connection.cursor()
+
+        # query untuk mengambil produk yang tersedia
+        query = """
+        SELECT 
+            p.id_produk, 
+            p.nama_produk, 
+            p.stok_produk, 
+            p.harga_produk, 
+            k.jenis_produk, 
+            k.deskripsi_produk 
+        FROM
+            produk p
+        JOIN kategori_produk k ON p.id_kategori_produk = k.id_kategori_produk
+        WHERE is_delete = FALSE AND stok_produk > 0
+        ORDER BY k.jenis_produk
+        """
+        cursor.execute(query)
+        list_produk = cursor.fetchall()  # ambil semua produk
+
+        if list_produk:  # jika ada produk
+            clear_all()
+            print("\n===== PRODUK ENTROPIN =====\n")
+            headers = ['ID', 'NAMA PRODUK', 'STOK', 'HARGA', 'KATEGORI', 'DESKRIPSI']
+            print(tabulate(list_produk, headers=headers, tablefmt='fancy_grid'))  # tampilkan tabel produk
+
+            print('''\n
+            1. Tambah Ke Keranjang
+            2. Kembali
+                ''')
+            pilih = input("Pilih (1/2): ")  # pilih aksi setelah lihat produk
+
+            if pilih == '1':  # tambah ke keranjang
+                # ===== INPUT ID PRODUK =====
+                while True:
+                    id_produk = input('\nMasukkan ID Produk (0 untuk selesai): ').strip()
+                    if id_produk == '':
+                        print('\nID tidak boleh dikosongi')
+                        next()
+                        continue
+                    elif id_produk == '0':  # kembali ke menu pembeli
+                        input('\nTekan Enter Untuk Kembali Ke Menu Pembeli')
+                        clear_all()
+                        menu_pembeli(id_pengguna, username)
+                        return
+                    elif not id_produk.isdigit():  # ID harus angka
+                        print('\nID Produk harus berupa angka')
+                        next()
+                        continue
+                    else:
+                        break
+
+                # ===== INPUT JUMLAH ITEM =====
+                while True:
+                    jumlah_item = input('Masukkan Jumlah Yang Ingin Dibeli: ').strip()
+                    if jumlah_item == '':
+                        print('\nJumlah Item tidak boleh dikosongi')
+                        next()
+                        continue
+                    elif not jumlah_item.isdigit():
+                        print('\nJumlah Item harus berupa angka')
+                        next()
+                        continue
+                    else:
+                        jumlah_item = int(jumlah_item)  # konversi ke integer
+                        break
+
+                # cek stok produk
+                cursor.execute("""SELECT nama_produk, harga_produk, stok_produk
+                                  FROM produk
+                                  WHERE id_produk = %s AND is_delete = FALSE
+                                  """, (id_produk,))
+                hasil = cursor.fetchone()
+
+                if hasil and hasil[2] >= jumlah_item:  # jika produk ada dan stok cukup
+                    if id_pengguna not in keranjang_entropin:    # jika user belum punya keranjang
+                        keranjang_entropin[id_pengguna] = []     # buat list baru
+
+                    # tambahkan item ke keranjang user
+                    keranjang_entropin[id_pengguna].append({
+                        'id_produk': id_produk,
+                        'nama_produk': hasil[0],
+                        'harga_produk': hasil[1],
+                        'jumlah_item': jumlah_item
+                    })
+                    print(f"\n {hasil[0]} berhasil ditambahkan")
+                    next()
+                    buyproduk_entropin(id_pengguna, username)  # tampilkan lagi daftar produk
+                    return
+                else:  # stok tidak cukup atau produk tidak ada
+                    print("\nStok Tidak Cukup atau Produk Tidak Ada")
+                    next()
+            elif pilih == '2':  # kembali ke menu pembeli
+                cursor.close()
+                connection.close()
+                clear_all()
+                menu_pembeli(id_pengguna, username)
+                return
+            else:
+                print('Menu Yang Dipilih Tidak Tersedia')
+                next()
+                clear_all()
+                buyproduk_entropin(id_pengguna, username)
+                return
+
+    except Error as error:  # error saat membeli produk
+        print(f"\nTerjadi kesalahan saat membeli produk: {error}")
+        input("Tekan Enter untuk melanjutkan...")
+        if connection:
+            connection.close()
+        clear_all()
+        buyproduk_entropin(id_pengguna, username)
+        return
+
+
+def keranjang_pembeli(id_pengguna, username):  # fungsi untuk melihat dan mengelola keranjang
+    clear_all()
+    connection = connect_db()
+    if connection is None:
+        return
+
+    try:
+        cursor = connection.cursor()
+
+        # cek apakah user punya keranjang dan tidak kosong
+        if id_pengguna not in keranjang_entropin or not keranjang_entropin[id_pengguna]:
+            print("Keranjang Anda Kosong")
+            input("Tekan Enter Untuk Kembali")
+            menu_pembeli(id_pengguna, username)
+            return
+
+        print("\n===== Keranjang Belanja =====\n")
+        keranjang = keranjang_entropin[id_pengguna]  # ambil keranjang user
+        total = 0  # total harga keranjang
+
+        i = 1  # nomor urut item
+        for item in keranjang:
+            subtotal = item['harga_produk'] * item['jumlah_item']  # hitung subtotal per item
+            total += subtotal  # akumulasi total
+
+            print(f'''
+            {i}. {item['nama_produk']}
+            Rp {item['harga_produk']} x {item['jumlah_item']} = Rp{subtotal}
+            ''')
+            i += 1
+
+        print(f"\nTotal : Rp{total}")  # tampilkan total belanja
+
+        print('''\n
+        1. Checkout
+        2. Hapus Item
+        3. Tambah Item
+        4. Kembali
+        ''')
+        pilih = input("\nPilih (1-4): ")  # pilih aksi keranjang
+
+        if pilih == '1':  # proses checkout
+            clear_all()
+            # ===== PILIH METODE PEMBAYARAN =====
+            while True:
+                print('''Daftar Nama Bank
+                1. BCA
+                2. BRI
+                3. MANDIRI
+                4. BNI
+                ''')
+                metode_pembayaran = input("\nMetode Pembayaran (Nama Bank): ").strip()
+                if metode_pembayaran == '':
+                    print('\nSilahkan masukkan nama bank')
+                    next()
+                    continue
+                elif metode_pembayaran not in ['BCA', 'BRI', 'MANDIRI', 'BNI']:
+                    print('\nMetode pembayaran tidak valid. Pilih: BCA, BRI, MANDIRI, atau BNI')
+                    next()
+                    continue
+                else:
+                    next()
+                    break
+
+            # ===== KONFIRMASI BAYAR SEKARANG / NANTI =====
+            while True:
+                bayar = input('\nApakah anda ingin membayar sekarang (iya/tidak)? ').strip().lower()
+                if bayar == '':
+                    print('\nTidak boleh diisi kosong')
+                    next()
+                    continue
+                elif bayar not in ['iya', 'tidak']:
+                    print('\nPilihan tidak valid. Ketik "iya" atau "tidak"')
+                    next()
+                    continue
+                else:
+                    break
+
+            if bayar == 'iya':
+                status_pesanan = 'diproses'              # jika langsung dibayar
+            else:
+                status_pesanan = 'menunggu pembayaran'    # jika belum bayar
+
+            # ===== PROSES SIMPAN PESANAN KE DATABASE =====
+            for item in keranjang:
+                # insert ke tabel pesanan
+                insert_pesanan = """
+                INSERT INTO pesanan (tanggal_pesanan, 
+                                     status_pesanan,
+                                     metode_pembayaran,
+                                     id_pengguna)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id_pesanan
+                """
+                cursor.execute(insert_pesanan, (date.today(),
+                                                status_pesanan,
+                                                metode_pembayaran,
+                                                id_pengguna
+                                                ))
+                id_pesanan = cursor.fetchone()[0]  # ambil id_pesanan yang baru dibuat
+
+                # insert ke detail_pesanan
+                insert_detail = """
+                INSERT INTO detail_pesanan(jumlah_pesanan, 
+                                           id_pesanan,
+                                           id_produk)
+                VALUES (%s, %s, %s)
+                """
+                cursor.execute(insert_detail, (item['jumlah_item'],
+                                               id_pesanan,
+                                               item['id_produk']
+                                               ))
+
+                # insert ke laporan
+                insert_laporan = """
+                INSERT INTO laporan (tanggal_laporan, 
+                                     status_akhir,
+                                     id_pesanan)
+                VALUES(%s, %s, %s)
+                """
+                cursor.execute(insert_laporan, (date.today(),
+                                                status_pesanan,
+                                                id_pesanan
+                                                ))
+
+                # update stok produk di tabel produk
+                cursor.execute("""UPDATE produk 
+                                  SET stok_produk = stok_produk - %s
+                                  WHERE id_produk = %s""",
+                               (item['jumlah_item'], item['id_produk']))
+                connection.commit()  # commit setiap loop
+
+            keranjang_entropin[id_pengguna] = []  # kosongkan keranjang user
+
+            if bayar == 'iya':
+                print(f'\nPesanan {username} sedang diproses')
+            else:
+                print(f'\nPesanan {username} disimpan. Status: Menunggu Pembayaran')
+
+            back()
+            menu_pembeli(id_pengguna, username)
+            return
+
+        elif pilih == '2':  # menghapus item dari keranjang
+            while True:
+                hapus_produk = input('Nomor Produk yang ingin dihapus : ').strip()
+                if hapus_produk == '':
+                    print('\nTidak boleh kosong')
+                    next()
+                    continue
+                elif not hapus_produk.isdigit():
+                    print('\nNomor harus berupa angka')
+                    next()
+                    continue
+
+                hapus_produk_fix = int(hapus_produk) - 1  # konversi ke index list (mulai dari 0)
+                if 0 <= hapus_produk_fix < len(keranjang):  # cek index valid
+                    hapus = keranjang.pop(hapus_produk_fix)  # hapus item dari list
+                    print(f"\n{hapus['nama_produk']} dihapus dari keranjang")
+                    next()
+                    menu_pembeli(id_pengguna, username)
+                    return
+                else:
+                    print('\nNomor tidak valid')
+
+        elif pilih == '3':  # tambah item lagi (kembali ke daftar produk)
+            clear_all()
+            buyproduk_entropin(id_pengguna, username)
+        elif pilih == '4':  # kembali ke menu pembeli
+            clear_all()
+            menu_pembeli(id_pengguna, username)
+        else:
+            print('\nPilihan tidak tersedia')
+            next()
+            cursor.close()
+            connection.close()
+            clear_all()
+            keranjang_pembeli(id_pengguna, username)
+            return
+
+    except Error as error:  # penanganan error keranjang
+        print(f"\nTerjadi kesalahan saat membeli produk: {error}")
+        input("Tekan Enter untuk melanjutkan...")
+        if connection:
+            connection.close()
+        clear_all()
+        keranjang_pembeli(id_pengguna, username)
+        return
+
+
+def pembeli_cek_pesanan(id_pengguna, username):  # fungsi untuk cek pesanan aktif pembeli
+    clear_all()
+    connection = connect_db()
+    if connection is None:
+        return
+
+    try:
+        cursor = connection.cursor()
+
+        # query untuk ambil pesanan yang statusnya masih aktif
+        cek_pesanan = """SELECT p.id_pesanan,
+                                p.tanggal_pesanan,
+                                pr.nama_produk,
+                                dp.jumlah_pesanan,
+                                p.status_pesanan,
+                                p.metode_pembayaran,
+                                CONCAT(j.nama_jalan, ', ', d.nama_desa, ', ', k.nama_kecamatan, ', ', kb.nama_kabupaten) AS alamat
+                        FROM pesanan p
+                        JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
+                        JOIN produk pr ON dp.id_produk = pr.id_produk
+                        JOIN pengguna pg ON pr.id_pengguna = pg.id_pengguna
+                        JOIN jalan j ON pg.id_jalan = j.id_jalan
+                        JOIN desa d ON j.id_desa = d.id_desa
+                        JOIN kecamatan k ON d.id_kecamatan = k.id_kecamatan
+                        JOIN kabupaten kb ON k.id_kabupaten = kb.id_kabupaten
+                        WHERE p.id_pengguna = %s
+                          AND p.status_pesanan IN ('diproses','dikirim','menunggu pembayaran')
+                        ORDER BY p.tanggal_pesanan DESC"""
+        cursor.execute(cek_pesanan, (id_pengguna,))
+        pesanan = cursor.fetchall()
+
+        if pesanan:  # jika ada pesanan
+            print(f'\n===== DATA PESANAN {username} =====\n')
+            headers = ['ID', 'Tgl Pesanan', 'Nama Produk', 'Banyak Produk', 'Status', 'Metode Bayar', 'Alamat']
+            print(tabulate(pesanan, headers=headers, tablefmt='fancy_grid'))
+
+            print('''\n
+            1. Bayar Pesanan (Ubah Status)
+            2. Kembali ke Menu Pembeli
+            ''')
+            pilih = input("\nPilih (1/2): ").strip()
+
+            if pilih == '1':  # fitur bayar pesanan yang menunggu pembayaran
+                while True:
+                    id_pesanan_bayar = input("\nMasukkan ID Pesanan yang ingin dibayar (0 untuk kembali): ").strip()
+                    if id_pesanan_bayar == '0':  # kembali ke menu pembeli
+                        clear_all()
+                        menu_pembeli(id_pengguna, username)
+                        return
+                    elif id_pesanan_bayar == '':
+                        print("\nID pesanan tidak boleh kosong")
+                        next()
+                        continue
+                    elif not id_pesanan_bayar.isdigit():
+                        print("\nID pesanan harus berupa angka")
+                        next()
+                        continue
+
+                    # cek pesanan milik user & statusnya masih menunggu pembayaran
+                    cursor.execute("""
+                    SELECT p.id_pesanan, p.status_pesanan 
+                    FROM pesanan p 
+                    WHERE p.id_pesanan = %s AND p.id_pengguna = %s
+                    """, (id_pesanan_bayar, id_pengguna))
+
+                    check_pesanan = cursor.fetchone()
+
+                    if check_pesanan is None:  # jika pesanan tidak ditemukan
+                        print("\nPesanan tidak ditemukan atau bukan milik Anda")
+                        next()
+                        continue
+                    if check_pesanan[1] != 'menunggu pembayaran':  # jika status bukan menunggu pembayaran
+                        print(f"\nPesanan ini sudah berstatus '{check_pesanan[1]}', tidak bisa diubah")
+                        next()
+                        continue
+
+                    # update status pesanan menjadi diproses
+                    cursor.execute("""
+                    UPDATE pesanan 
+                    SET status_pesanan = %s 
+                    WHERE id_pesanan = %s
+                    """, ('diproses', id_pesanan_bayar))
+
+                    # update status di tabel laporan
+                    cursor.execute("""
+                    UPDATE laporan 
+                    SET status_akhir = %s 
+                    WHERE id_pesanan = %s
+                    """, ('diproses', id_pesanan_bayar))
+
+                    connection.commit()
+
+                    print(f"\nPesanan ID {id_pesanan_bayar} berhasil dibayar!")
+                    next()
+                    pembeli_cek_pesanan(id_pengguna, username)
+                    return
+
+            elif pilih == '2':  # kembali ke menu pembeli
+                clear_all()
+                menu_pembeli(id_pengguna, username)
+                return
+            else:
+                print("\nPilihan tidak valid")
+                next()
+                clear_all()
+                menu_pembeli(id_pengguna, username)
+                return
+        else:  # jika tidak ada pesanan aktif
+            print(f'{username} tidak memiliki pesanan')
+            next()
+            cursor.close()
+            connection.close()
+            menu_pembeli(id_pengguna, username)
+            return
+
+    except Error as error:  # error cek pesanan
+        print(f"\nTerjadi kesalahan saat mengecek pesanan: {error}")
+        next()
+        if connection:
+            connection.close()
+        menu_pembeli(id_pengguna, username)
+        return
+
+
+def pembeli_riwayat_pesanan(id_pengguna, username):  # fungsi untuk melihat riwayat pesanan (selesai/dibatalkan)
+    clear_all()
+    connection = connect_db()
+    if connection is None:
+        return
+
+    try:
+        cursor = connection.cursor()
+
+        # query riwayat laporan pesanan user
+        cek_laporan = """SELECT l.tanggal_laporan,
+                                pr.nama_produk,
+                                dp.jumlah_pesanan,
+                                l.status_akhir,
+                                p.metode_pembayaran,
+                                CONCAT(j.nama_jalan, ', ', d.nama_desa, ', ', k.nama_kecamatan, ', ', kb.nama_kabupaten) AS alamat
+                        FROM laporan l
+                        JOIN pesanan p ON p.id_pesanan = l.id_pesanan
+                        JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
+                        JOIN produk pr ON dp.id_produk = pr.id_produk
+                        JOIN pengguna pg ON p.id_pengguna = pg.id_pengguna
+                        JOIN jalan j ON pg.id_jalan = j.id_jalan
+                        JOIN desa d ON j.id_desa = d.id_desa
+                        JOIN kecamatan k ON d.id_kecamatan = k.id_kecamatan
+                        JOIN kabupaten kb ON k.id_kabupaten = kb.id_kabupaten
+                        WHERE p.id_pengguna = %s AND l.status_akhir IN ('selesai', 'dibatalkan')
+                        ORDER BY l.tanggal_laporan DESC"""
+        cursor.execute(cek_laporan, (id_pengguna,))
+        laporan = cursor.fetchall()
+
+        if laporan:  # jika ada riwayat
+            print(f'\n===== RIWAYAT PEMBELIAN {username} =====\n')
+            headers = ['Tanggal', 'Nama Produk', 'Jumlah Produk', 'Status Pesanan', 'Metode Bayar', 'Alamat']
+            print(tabulate(laporan, headers=headers, tablefmt='fancy_grid'))
+            back()
+            menu_pembeli(id_pengguna, username)
+        else:  # jika tidak ada riwayat
+            print(f'{username} tidak memiliki riwayat pesanan')
+            next()
+            cursor.close()
+            connection.close()
+            menu_pembeli(id_pengguna, username)
+            return
+
+    except Error as error:  # error lihat riwayat
+        print(f"\nTerjadi kesalahan saat meihat riwayat pesanan: {error}")
+        next()
+        if connection:
+            connection.close()
+        clear_all()
+        menu_pembeli(id_pengguna, username)
+        return
+
+
+def menu_penjual(id_pengguna, username):  # menu utama untuk penjual
+    clear_all()
+    print(f'''
+ __  __                    ____             _             _ 
+|  \/  | ___ _ __  _   _  |  _ \ ___ _ __  (_)_   _  __ _| |
+| |\/| |/ _ \ '_ \| | | | | |_) / _ \ '_ \ | | | | |/ _` | |
+| |  | |  __/ | | | |_| | |  __/  __/ | | || | |_| | (_| | |
+|_|  |_|\___|_| |_|\__,_| |_|   \___|_| |_|/ |\__,_|\__,_|_|
+                                         |__/              
+
+Selamat Datang {username} Di Entropin!
+
+1. Kelola Produk
+2. Lihat Riwayat Penjualan
+3. Lihat harga Pasar
+4. Logout
+''')
+    pilihan = input("Pilih Menu(1-4): ")  # input menu penjual
+    if pilihan == "1":  # kelola produk
+        clear_all()
+        penjual_kelola_produk(id_pengguna, username)
+    elif pilihan == "2":  # riwayat penjualan
+        clear_all()
+        penjual_riwayat_penjualan(id_pengguna, username)
+    elif pilihan == "3":  # lihat harga pasar
+        clear_all()
+        penjual_lihat_pasar(id_pengguna, username)
+    elif pilihan == "4":  # logout ke main menu
+        clear_all()
+        main_menu()
+        return
+    else:
+        print("Pilihan tidak valid")
+        back()
+        menu_penjual(id_pengguna, username)
+
+
+def penjual_kelola_produk(id_pengguna, username):  # fungsi utama kelola produk penjual
+    clear_all()
+    connection = connect_db()
+    if connection is None:
+        return
+
+    try:
+        cursor = connection.cursor()
+
+        print('''
+    ===== KELOLA PRODUK ENTROPIN =====
+
+    1. Lihat Produk
+    2. Tambah Produk 
+    3. Update Produk
+    4. Hapus Produk
+    5. Kembali
+    ''')
+
+        pilihan = input("Pilih(1-5): ")  # input menu kelola produk
+
+        if pilihan == "1":  # penjual lihat semua produk
+            clear_all()
+            query = """
+            SELECT 
+                p.id_produk, 
+                p.nama_produk, 
+                p.stok_produk, 
+                p.harga_produk, 
+                k.jenis_produk, 
+                k.deskripsi_produk,
+                p.id_pengguna 
+            FROM
+                produk p
+            JOIN kategori_produk k ON p.id_kategori_produk = k.id_kategori_produk
+            WHERE is_delete = FALSE AND stok_produk > 0
+            """
+
+            cursor.execute(query)
+            produk = cursor.fetchall()
+
+            if produk:  # jika ada data produk
+                print("\n===== PRODUK ENTROPIN =====\n")
+                headers = ["ID", "NAMA PRODUK", "STOK", "HARGA", "KATEGORI", "DESKRIPSI", "ID PENGGUNA"]
+                print(tabulate(produk, headers=headers, tablefmt="fancy_grid"))
+                input("\nTekan enter untuk kembali ke menu penjual")
+                clear_all()
+                penjual_kelola_produk(id_pengguna, username)
+            else:
+                print("\nBelum ada produk.")
+                next()
+                penjual_kelola_produk(id_pengguna, username)
+
+        elif pilihan == "2":  # penjual menambah produk
+            clear_all()
+            while True:
+                nama_produk = input("Nama Produk (0 untuk selesai): ").strip()
+                if nama_produk == '':
+                    print('\nNama produk tidak boleh kosong')
+                    next()
+                    continue
+                elif nama_produk == "0":  # kembali ke menu penjual
+                    input("\nTekan enter untuk kembali ke menu penjual")
+                    next()
+                    cursor.close()
+                    connection.close()
+                    return menu_penjual(id_pengguna, username)
+
+                # ===== INPUT HARGA PRODUK =====
+                while True:
+                    harga_produk = input("Harga Produk: ").strip()
+                    if harga_produk == '':
+                        print('\nHarga tidak boleh kosong')
+                        next()
+                        continue
+                    elif not harga_produk.isdigit():
+                        print('\nHarga harus berupa angka')
+                        next()
+                        continue
+                    else:
+                        harga_produk = int(harga_produk)
+                        break
+
+                # ===== INPUT STOK PRODUK =====
+                while True:
+                    stok_produk = input("Stok Produk: ").strip()
+                    if stok_produk == '':
+                        print('\nStok produk tidak boleh kosong')
+                        next()
+                        continue
+                    elif not stok_produk.isdigit():
+                        print('\nStok harus berupa angka')
+                        next()
+                        continue
+                    else:
+                        stok_produk = int(stok_produk)
+                        break
+
+                # ===== INPUT KATEGORI PRODUK =====
+                while True:
+                    print('''\n===== NAMA KATEGORI =====\n
+                            1. Hasil Panen
+                            2. Olahan Pertanian
+                            3. Bibit dan Benih
+                            4. Pupuk dan Nutrisi Tanaman
+                        ''')
+                    kategori = input("Kategori Produk: ").strip()
+                    if kategori == '':
+                        print('Kategori tidak boleh kosong')
+                        next()
+                        continue
+
+                    # cek id_kategori_produk berdasarkan jenis_produk
+                    cursor.execute("SELECT id_kategori_produk FROM kategori_produk WHERE jenis_produk = %s ", (kategori,))
+                    nama_kategori = cursor.fetchone()
+
+                    if nama_kategori is None:  # kategori tidak ditemukan
+                        print('\nNama kategori tidak ada. Silahkan masukkan nama kategori dengan benar')
+                        next()
+                        continue
+                    elif nama_kategori is not None:
+                        id_kategori_produk = nama_kategori[0]
+                        next()
+                        break
+
+                # ===== INSERT PRODUK BARU =====
+                tambah_produk = """
+                INSERT INTO produk (nama_produk, harga_produk, stok_produk, id_kategori_produk, is_delete, id_pengguna)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                cursor.execute(tambah_produk, (nama_produk, harga_produk, stok_produk, id_kategori_produk, False, id_pengguna))
+                connection.commit()
+                print(f"Produk {nama_produk} berhasil ditambahkan")
+                next()
+                penjual_kelola_produk(id_pengguna, username)
+
+        elif pilihan == "3":  # penjual update produk
+            clear_all()
+            pilih_produk = "SELECT id_produk, nama_produk, harga_produk, stok_produk FROM produk WHERE is_delete = FALSE AND id_pengguna = %s"
+            cursor.execute(pilih_produk, (id_pengguna,))
+            produk = cursor.fetchall()
+
+            if produk:  # jika produk milik penjual ada
+                header = ["ID", "Nama", "Harga", "Stok"]
+                print(tabulate(produk, headers=header, tablefmt="fancy_grid"))
+
+                # ===== PILIH PRODUK YANG AKAN DIUPDATE =====
+                while True:
+                    id_produk = input("ID Produk yang akan diupdate (0 untuk kembali): ").strip()
+                    if id_produk == "":
+                        print("ID tidak boleh kosong")
+                        next()
+                        continue
+                    elif not id_produk.isdigit():
+                        print("ID harus berupa angka")
+                        next()
+                        continue
+                    elif id_produk == "0":
+                        input("\nTekan enter untuk kembali ke menu penjual")
+                        next()
+                        cursor.close()
+                        connection.close()
+                        return menu_penjual(id_pengguna, username)
+                    else:
+                        id_produk = int(id_produk)
+                        break
+
+                # ===== INPUT HARGA BARU =====
+                while True:
+                    harga = input("Harga baru: ").strip()
+                    if harga == "":
+                        print("Harga tidak boleh kosong")
+                        next()
+                        continue
+                    elif not harga.isdigit():
+                        print("Harga harus berupa angka")
+                        next()
+                        continue
+                    else:
+                        harga = int(harga)
+                        break
+
+                # ===== INPUT STOK BARU =====
+                while True:
+                    stok = input("Stok baru: ").strip()
+                    if stok == "":
+                        print("Stok tidak boleh kosong")
+                        next()
+                        continue
+                    elif not stok.isdigit():
+                        print("Stok harus berupa angka")
+                        next()
+                        continue
+                    else:
+                        stok = int(stok)
+                        break
+
+                # update produk di database
+                query = "UPDATE produk SET harga_produk = %s, stok_produk = %s WHERE id_produk = %s"
+                cursor.execute(query, (harga, stok, id_produk))
+                connection.commit()
+                print(f"\nUpdate produk dengan ID {id_produk} berhasil")
+                next()
+                penjual_kelola_produk(id_pengguna, username)
+            else:
+                print("\nBelum ada produk")
+                next()
+                penjual_kelola_produk(id_pengguna, username)
+
+        elif pilihan == "4":  # penjual menghapus produk (soft delete)
+            clear_all()
+            hapus_produk = "SELECT id_produk, nama_produk, harga_produk, stok_produk FROM produk WHERE is_delete = FALSE AND id_pengguna = %s"
+            cursor.execute(hapus_produk, (id_pengguna,))
+            produk = cursor.fetchall()
+
+            if produk:
+                headers = ["ID", "Nama", "Harga", "Stok"]
+                print(tabulate(produk, headers=headers, tablefmt="fancy_grid"))
+
+                while True:
+                    id_produk = input("ID Produk yang akan dihapus (0 untuk kembali): ").strip()
+                    if id_produk == "":
+                        print("ID tidak boleh kosong")
+                        next()
+                        continue
+                    elif not id_produk.isdigit():
+                        print("ID harus berupa angka")
+                        next()
+                        continue
+                    elif id_produk == "0":
+                        input("\nTekan enter untuk kembali ke menu penjual")
+                        next()
+                        cursor.close()
+                        connection.close()
+                        return menu_penjual(id_pengguna, username)
+                    else:
+                        id_produk = int(id_produk)
+                        break
+
+                # soft delete (set is_delete = TRUE)
+                query = "UPDATE produk SET is_delete = TRUE WHERE id_produk = %s"
+                cursor.execute(query, (id_produk,))
+                connection.commit()
+                print("\nProduk berhasil dihapus")
+                next()
+                penjual_kelola_produk(id_pengguna, username)
+            else:
+                print("\nBelum ada produk")
+                next()
+                penjual_kelola_produk(id_pengguna, username)
+        elif pilihan == "5":  # kembali ke menu penjual
+            input("\nTekan enter untuk kembali ke menu penjual")
+            clear_all()
+            menu_penjual(id_pengguna, username)
+        else:
+            print('Menu Yang Dipilih Tidak Tersedia')
+            next()
+            cursor.close()
+            connection.close()
+            clear_all()
+            penjual_kelola_produk(id_pengguna, username)
+            return
+
+    except Error as error:  # error saat kelola produk
+        print(f"\nTerjadi kesalahan saat mengelola produk: {error}")
+        input("Tekan Enter untuk melanjutkan...")
+        if connection:
+            connection.close()
+        clear_all()
+        penjual_kelola_produk(id_pengguna, username)
+        return
+
+
+def penjual_riwayat_penjualan(id_pengguna, username):  # fungsi melihat riwayat penjualan penjual
+    connection = connect_db()
+    if connection is None:
+        return
+
+    try:
+        cursor = connection.cursor()
+        # query untuk menghitung total terjual dan pendapatan per produk penjual
+        riwayat = """SELECT pr.nama_produk,
+                            kat.jenis_produk,
+                            SUM(dp.jumlah_pesanan) AS total_terjual,
+                            COUNT(dp.id_pesanan) AS banyak_dibeli,
+                            SUM(dp.jumlah_pesanan * pr.harga_produk) AS total_pendapatan,
+                            pr.stok_produk AS sisa_stok
+                    FROM produk pr
+                    JOIN detail_pesanan dp ON pr.id_produk = dp.id_produk
+                    JOIN kategori_produk kat ON pr.id_kategori_produk = kat.id_kategori_produk
+                    WHERE pr.id_pengguna = %s
+                    GROUP BY pr.id_produk, pr.nama_produk, kat.jenis_produk, pr.stok_produk
+                    ORDER BY total_pendapatan DESC"""
+        cursor.execute(riwayat, (id_pengguna,))
+        data_riwayat = cursor.fetchall()
+
+        if data_riwayat:
+            print(f"\n===== RIWAYAT PENJUALAN {username} =====\n")
+            headers = ["NAMA PRODUK", "KATEGORI", "TERJUAL", "BANYAK DIBELI", "PENDAPATAN", "SISA STOK"]
+            print(tabulate(data_riwayat, headers=headers, tablefmt="fancy_grid"))
+
+            # hitung total omset dari semua produk
+            grand_total = sum(row[4] for row in data_riwayat)
+            print(f"\nTotal Omset Keseluruhan: Rp {grand_total}")
+            back()
+            menu_penjual(id_pengguna, username)
+        else:
+            print("\nBelum ada riwayat penjualan")
+            next()
+            cursor.close()
+            connection.close()
+            clear_all()
+            menu_penjual(id_pengguna, username)
+            return
+
+    except Error as error:
+        print(f"\nTerjadi kesalahan saat melihat riwayat: {error}")
+        input("Tekan Enter untuk melanjutkan...")
+        if connection:
+            connection.close()
+        clear_all()
+        menu_penjual(id_pengguna, username)
+        return
+
+
+def penjual_lihat_pasar(id_pengguna, username):  # fungsi penjual melihat daftar harga pasar
+    connection = connect_db()
+    if connection is None:
+        return
+
+    try:
+        cursor = connection.cursor()
+
+        # query harga pasar dari tabel kelola_pasar
+        cek_pasar = """SELECT nama_produk_pasar, 
+                        harga_min_kelola_pasar, 
+                        harga_max_kelola_pasar, 
+                        harga_rata_kelola_pasar, 
+                        lokasi_pasar
+                    FROM kelola_pasar
+                    WHERE is_delete = FALSE
+                    ORDER BY nama_produk_pasar"""
+
+        cursor.execute(cek_pasar)
+        data_pasar = cursor.fetchall()
+        if data_pasar:
+            print("\n===== DAFTAR HARGA PASAR =====\n")
+
+            headers = ["PRODUK", "HARGA MIN", "HARGA MAX", "HARGA RATA-RATA", "LOKASI"]
+            print(tabulate(data_pasar, headers=headers, tablefmt="fancy_grid"))
+
+            print("\nGunakan data ini sebagai referensi harga jual produk Anda!")
+            next()
+            menu_penjual(id_pengguna, username)
+        else:
+            print("\nBelum ada data harga pasar")
+            next()
+            cursor.close()
+            connection.close()
+            clear_all()
+            menu_pembeli(id_pengguna, username)
+            return
+
+    except Error as error:
+        print(f"\nTerjadi kesalahan saat melihat harga pasar: {error}")
+        input("Tekan Enter untuk melanjutkan...")
+        if connection:
+            connection.close()
+        clear_all()
+        penjual_lihat_pasar(id_pengguna, username)
+        return
+
+
+def menu_admin(id_pengguna, username):  # menu utama admin
+    clear_all()
+    print(f"""
+ __  __                       _       _           _        
+|  \/  | ___ _ __  _   _     / \   __| |_ __ ___ (_)_ __  
+| |\/| |/ _ \ '_ \| | | |   / _ \ / _` | '_ ` _ \| | '_ \ 
+| |  | |  __/ | | | |_| |  / ___ \ (_| | | | | | | | | | |
+|_|  |_|\___|_| |_|\__,_| /_/   \_\__,_|_| |_| |_|_|_| |_|
+
+Selamat Datang {username} Di Entropin!
+
+1. Cek Pesanan
+2. Kelola Pasar
+3. Logout
+""")
+
+    pilih = input('Pilih Menu (1-3) : ')  # input menu admin
+
+    if pilih == '1':  # admin cek pesanan
+        clear_all()
+        admin_cek_pesanan(id_pengguna, username)
+    elif pilih == '2':  # admin kelola pasar
+        clear_all()
+        admin_kelola_pasar(id_pengguna, username)
+    elif pilih == "3":  # logout
+        clear_all()
+        main_menu()
+    else:
+        print("Pilihan tidak ditemukan")
+        next()
+        menu_admin(id_pengguna, username)
+        return
+
+
+def admin_cek_pesanan(id_pengguna, username):  # fungsi admin melihat & mengubah status pesanan
+    while True:  # loop agar admin bisa ubah beberapa pesanan sekaligus
+        clear_all()
+        connection = connect_db()
+        if connection is None:
+            return
+
+        try:
+            cursor = connection.cursor()
+
+            # query semua pesanan pembeli
+            query = """SELECT p.id_pesanan,
+                            p.tanggal_pesanan,
+                            p.status_pesanan,
+                            pr.nama_produk,
+                            dp.jumlah_pesanan,
+                            p.metode_pembayaran,
+                            pe.nama_pengguna,
+                            CONCAT(j.nama_jalan, ', ', d.nama_desa, ', ', k.nama_kecamatan, ', ', kb.nama_kabupaten) AS alamat
+                        FROM pesanan p
+                        JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
+                        JOIN produk pr ON dp.id_produk = pr.id_produk
+                        JOIN pengguna pe ON p.id_pengguna = pe.id_pengguna
+                        JOIN jalan j ON pe.id_jalan = j.id_jalan
+                        JOIN desa d ON j.id_desa = d.id_desa
+                        JOIN kecamatan k ON d.id_kecamatan = k.id_kecamatan
+                        JOIN kabupaten kb ON k.id_kabupaten = kb.id_kabupaten
+                        WHERE pe.role = 'pembeli'
+                        ORDER BY p.tanggal_pesanan ASC"""
+            cursor.execute(query)
+            pesanan_list = cursor.fetchall()
+
+            if pesanan_list:
+                clear_all()
+                print("\n === DAFTAR PESANAN ===")
+
+                headers = ["ID", "TGL PESANAN", "STATUS", "PRODUK", "QUANTITY", "METODE BAYAR", "PELANGGAN", "ALAMAT"]
+                print(tabulate(pesanan_list, headers=headers, tablefmt="fancy_grid"))
+
+            else:
+                print("\nBelum ada pesanan.")
+                next()
+                cursor.close()
+                connection.close()
+                return menu_admin(id_pengguna, username)
+
+            print("\n === UBAH STATUS PESANAN ===")
+            print("(Masukkan '0' untuk kembali ke menu admin)")
+            id_pesanan = input("\n Masukkan id pesanan: ").strip()
+
+            if id_pesanan == '':
+                print("\nID pesanan tidak boleh kosong")
+                next()
+                continue
+            elif not id_pesanan.isdigit():
+                print("\nID pesanan harus berupa angka")
+                next()
+                continue
+            elif id_pesanan == '0':  # kembali ke menu admin
+                next()
+                cursor.close()
+                connection.close()
+                return menu_admin(id_pengguna, username)
+
+            print("""\nStatus yang tersedia:
+                1. dikirim
+                2. selesai
+                3. dibatalkan""")
+
+            status_pilihan = input("\nPilih status baru (1-3): ").strip()
+
+            # mapping input angka ke status string
+            status_map = {
+                "1": "dikirim",
+                "2": "selesai",
+                "3": "dibatalkan"}
+
+            if status_pilihan in status_map:
+                status_baru = status_map[status_pilihan]
+
+                # update status di tabel pesanan
+                update_pesanan = """UPDATE pesanan
+                                SET status_pesanan = %s
+                                WHERE id_pesanan = %s
+                                """
+                cursor.execute(update_pesanan, (status_baru, id_pesanan))
+                connection.commit()
+
+                # update status di tabel laporan
+                update_laporan = """UPDATE laporan
+                                SET status_akhir = %s
+                                WHERE id_pesanan = %s
+                                """
+                cursor.execute(update_laporan, (status_baru, id_pesanan))
+                connection.commit()
+
+                print(f"\n Status pesanan dengan ID {id_pesanan} berhasil diubah menjadi {status_baru}")
+                next()
+                continue
+            else:
+                print("\nPilihan tidak valid")
+                next()
+                continue
+
+        except Error as error:
+            print(f"\n Error: {error}")
+            if connection:
+                connection.close()
+            next()
+            return menu_admin(id_pengguna, username)
+
+
+def admin_kelola_pasar(id_pengguna, username):  # fungsi admin untuk kelola data pasar
+    clear_all()
+    connection = connect_db()
+    if connection is None:
+        print("koneksi tidak berhasil")
+        return
+    try:
+        cursor = connection.cursor()
+
+        print("""\n===== KELOLA PASAR =====\n
+        1. lihat data pasar
+        2. tambah data pasar
+        3. update data pasar
+        4. hapus data pasar
+        5. kembali
+        """)
+
+        pilih = input("\n silahkan pilih nomor(1-5): ")
+
+        if pilih == '1':  # lihat data pasar
+            clear_all()
+            pasar = """SELECT id_kelola_pasar,
+                            nama_produk_pasar,
+                            harga_min_kelola_pasar,
+                            harga_max_kelola_pasar,
+                            harga_rata_kelola_pasar,
+                            lokasi_pasar
+                    FROM kelola_pasar 
+                    WHERE is_delete = FALSE"""
+            cursor.execute(pasar)
+            data_pasar = cursor.fetchall()
+
+            headers = ["ID", "NAMA PRODUK", "HARGA MIN", "HARGA MAX", "HARGA RATA-RATA", "LOKASI"]
+            print(tabulate(data_pasar, headers=headers, tablefmt="fancy_grid"))
+
+            back()
+            admin_kelola_pasar(id_pengguna, username)
+
+        elif pilih == '2':  # tambah data pasar
+            clear_all()
+            print("ketik 0 untuk kembali ke menu sebelumnya")
+            while True:
+                nama_produk = input("Masukan nama produk: ").title()
+                if nama_produk == '':
+                    print('\nNama produk tidak boleh kosong')
+                    next()
+                    continue
+                elif nama_produk == "0":
+                    next()
+                    cursor.close()
+                    connection.close()
+                    return admin_kelola_pasar(id_pengguna, username)
+                else:
+                    break
+
+            while True:
+                harga_minim = input("harga minimal produk: ")
+                if harga_minim == '':
+                    print('\nHarga minimal tidak boleh kosong')
+                    next()
+                    continue
+                elif harga_minim == "0":
+                    next()
+                    cursor.close()
+                    connection.close()
+                    return admin_kelola_pasar(id_pengguna, username)
+                elif not harga_minim.isdigit():
+                    print('\nHarga minimal harus berupa angka')
+                    next()
+                    continue
+                else:
+                    break
+
+            while True:
+                harga_maksimal = input("harga max produk: ")
+                if harga_maksimal == '':
+                    print('\nHarga maksimal tidak boleh kosong')
+                    next()
+                    continue
+                elif harga_maksimal == "0":
+                    next()
+                    cursor.close()
+                    connection.close()
+                    return admin_kelola_pasar(id_pengguna, username)
+                elif not harga_maksimal.isdigit():
+                    print('\nHarga maksimal harus berupa angka')
+                    next()
+                    continue
+                else:
+                    break
+
+            while True:
+                harga_rata_rata = input("harga rata-rata produk: ")
+                if harga_rata_rata == '':
+                    print('\nHarga rata-rata tidak boleh kosong')
+                    next()
+                    continue
+                elif harga_rata_rata == "0":
+                    next()
+                    cursor.close()
+                    connection.close()
+                    return admin_kelola_pasar(id_pengguna, username)
+                elif not harga_rata_rata.isdigit():
+                    print('\nHarga rata-rata harus berupa angka')
+                    next()
+                    continue
+                else:
+                    break
+
+            while True:
+                lokasi_pasar = input("lokasi pasar: ").title()
+                if lokasi_pasar == '':
+                    print('\nLokasi pasar tidak boleh kosong')
+                    next()
+                    continue
+                elif lokasi_pasar == "0":
+                    next()
+                    cursor.close()
+                    connection.close()
+                    return admin_kelola_pasar(id_pengguna, username)
+                else:
+                    break
+
+            # insert data pasar baru
+            query = """
+            INSERT INTO kelola_pasar(nama_produk_pasar,
+                        harga_min_kelola_pasar, 
+                        harga_max_kelola_pasar, 
+                        harga_rata_kelola_pasar, 
+                        lokasi_pasar, 
+                        is_delete, 
+                        id_pengguna)
+            VALUES  (%s, %s, %s, %s, %s, %s, %s)"""
+
+            cursor.execute(query, (nama_produk, harga_minim, harga_maksimal, harga_rata_rata, lokasi_pasar, 'FALSE', id_pengguna))
+            connection.commit()
+
+            print("\nPRODUK BERHASIL DITAMBAHKAN!")
+            back()
+            admin_kelola_pasar(id_pengguna, username)
+
+        elif pilih == "3":  # update data pasar
+            clear_all()
+            query = """SELECT id_kelola_pasar,
+                            nama_produk_pasar,
+                            harga_min_kelola_pasar,
+                            harga_max_kelola_pasar,
+                            harga_rata_kelola_pasar,
+                            lokasi_pasar
+                    FROM kelola_pasar 
+                    WHERE is_delete = FALSE"""
+            cursor.execute(query)
+            data = cursor.fetchall()
+
+            if data:
+                headers = ["ID", "NAMA PRODUK", "HARGA MIN", "HARGA MAX", "HARGA RATA-RATA", "LOKASI"]
+                print(tabulate(data, headers=headers, tablefmt="fancy_grid"))
+
+                print("Ketik 0 untuk kembali ke menu sebelumnya")
+                while True:
+                    id_pasar = input("masukkan id pasar yang ingin diperbarui: ").strip()
+                    if id_pasar == "":
+                        print("\nID pasar tidak boleh kosong")
+                        next()
+                        continue
+                    elif not id_pasar.isdigit():
+                        print("\nID pasar harus berupa angka")
+                        next()
+                        continue
+                    elif id_pasar == "0":
+                        back()
+                        cursor.close()
+                        connection.close()
+                        return admin_kelola_pasar(id_pengguna, username)
+                    else:
+                        id_pasar = int(id_pasar)
+                        break
+
+                while True:
+                    harga_minim = input("Masukkan harga minimal: ").strip()
+                    if harga_minim == "":
+                        print('\nHarga minimal tidak boleh kosong')
+                        next()
+                        continue
+                    elif not harga_minim.isdigit():
+                        print('\nHarga minimal harus berupa angka')
+                        next()
+                        continue
+                    elif int(harga_minim) == 0:
+                        back()
+                        cursor.close()
+                        connection.close()
+                        return admin_kelola_pasar(id_pengguna, username)
+                    else:
+                        harga_minim = int(harga_minim)
+                        break
+
+                while True:
+                    harga_maksimal = input("Masukkan harga maksimal: ").strip()
+                    if harga_maksimal == "":
+                        print('\nHarga maksimal tidak boleh kosong')
+                        next()
+                        continue
+                    elif not harga_maksimal.isdigit():
+                        print('\nHarga maksimal harus berupa angka')
+                        next()
+                        continue
+                    elif int(harga_maksimal) == 0:
+                        back()
+                        cursor.close()
+                        connection.close()
+                        return admin_kelola_pasar(id_pengguna, username)
+                    else:
+                        harga_maksimal = int(harga_maksimal)
+                        break
+
+                while True:
+                    harga_rata_rata = input("Masukkan harga rata-rata: ").strip()
+                    if harga_rata_rata == "":
+                        print('\nHarga rata-rata tidak boleh kosong')
+                        next()
+                        continue
+                    elif not harga_rata_rata.isdigit():
+                        print('\nHarga rata-rata harus berupa angka')
+                        next()
+                        continue
+                    elif int(harga_rata_rata) == 0:
+                        back()
+                        cursor.close()
+                        connection.close()
+                        return admin_kelola_pasar(id_pengguna, username)
+                    else:
+                        harga_rata_rata = int(harga_rata_rata)
+                        break
+
+                # update data pasar
+                query = """ UPDATE kelola_pasar
+                            SET harga_min_kelola_pasar = %s, 
+                                harga_max_kelola_pasar = %s,
+                                harga_rata_kelola_pasar = %s 
+                            WHERE id_kelola_pasar = %s
+                            ORDER BY id_kelola_pasar"""
+                cursor.execute(query, (harga_minim, harga_maksimal, harga_rata_rata, id_pasar))
+                connection.commit()
+
+                print("\nDATA BERHASIL DIUBAH...")
+                back()
+                admin_kelola_pasar(id_pengguna, username)
+            else:
+                print("\nbelum ada data pasar")
+                next()
+                admin_kelola_pasar(id_pengguna, username)
+                return
+
+        elif pilih == "4":  # hapus data pasar (soft delete)
+            clear_all()
+            query = """SELECT id_kelola_pasar,
+                            nama_produk_pasar,
+                            harga_min_kelola_pasar,
+                            harga_max_kelola_pasar,
+                            harga_rata_kelola_pasar,
+                            lokasi_pasar
+                    FROM kelola_pasar 
+                    WHERE is_delete = FALSE"""
+            cursor.execute(query)
+            data = cursor.fetchall()
+
+            if data:
+                headers = ["ID", "PRODUK", "HARGA MINIM", "HARGA MAX", "HARGA RATA-RATA", "LOKASI"]
+                print(tabulate(data, headers=headers, tablefmt="fancy_grid"))
+
+                while True:
+                    id_pasar = input("\nMasukkan id pasar yang ingin dihapus (0 untuk kembali): ").strip()
+                    if id_pasar == '':
+                        print("\nID pasar tidak boleh kosong")
+                        next()
+                        continue
+                    elif not id_pasar.isdigit():
+                        print("\nID pasar harus berupa angka")
+                        next()
+                        continue
+                    elif id_pasar == "0":
+                        back()
+                        cursor.close()
+                        connection.close()
+                        return admin_kelola_pasar(id_pengguna, username)
+                    else:
+                        id_pasar = int(id_pasar)
+                        break
+
+                # soft delete data pasar
+                query = """UPDATE kelola_pasar 
+                        SET is_delete = TRUE 
+                        WHERE id_kelola_pasar = %s"""
+                cursor.execute(query, (id_pasar,))
+                connection.commit()
+
+                print("\nData pasar berhasil dihapus")
+                back()
+                admin_kelola_pasar(id_pengguna, username)
+        elif pilih == "5":  # kembali ke menu admin
+            back()
+            menu_admin(id_pengguna, username)
+        else:
+            print("\nData pasar tidak ditemukan")
+            next()
+            cursor.close()
+            connection.close()
+            clear_all()
+            menu_admin(id_pengguna, username)
+            return
+
+    except Error as error:  # error saat kelola pasar
+        print(f"\nTerjadi kesalahan saat registrasi: {error}")
+        input("Tekan Enter untuk melanjutkan...")
+        if connection:
+            connection.close()
+        clear_all()
+        menu_admin(id_pengguna, username)
+        return
+
+
+# ===== PROGRAM UTAMA DIMULAI DI SINI =====
+clear_all()
+print(r"""
+          _                                      ____                              
+  ()     | |                                    (|   \                              
+  /\  _  | |  __,   _  _  _    __, _|_           |    | __, _|_  __,   _  _    __, 
+ /  \|/  |/  /  |  / |/ |/ |  /  |  |           _|    |/  |  |  /  |  / |/ |  /  | 
+/(__/|__/|__/\_/|_/  |  |  |_/\_/|_/|_/        (/\___/ \_/|_/|_/\_/|_/  |  |_/\_/|/
+                                                                            /|  
+                                                                            \|                              
+""")
+input("Silahkan Tekan Enter Untuk Melanjutkan Ke Sistem ENTROPIN!")
+clear_all()
+main_menu()  # panggil menu utama
