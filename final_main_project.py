@@ -241,26 +241,21 @@ def register_penjual():
             elif len(password) > 15:
                 print('\nPassword terlalu panjang')
                 continue
-            check_query = '''SELECT password_pengguna
-                            FROM pengguna 
-                            WHERE password_pengguna = %s'''
-            cursor.execute(check_query, (password,))
-            check_pw = cursor.fetchone()
-
-            if check_pw:
-                print("\nPassword sudah digunakan! Silahkan gunakan password lain.")
-                next()
-                continue
             else:
                 next()
                 break
         role = "penjual" 
         
+        cursor.execute("SELECT id_role_pengguna FROM role_pengguna WHERE role = %s", (role,))
+        row = cursor.fetchone()
+        if row:
+            id_role = row[0]
+
         insert_query = """
-        INSERT INTO pengguna (nama_pengguna, no_telp_pengguna, username_pengguna, password_pengguna, role, id_jalan)
+        INSERT INTO pengguna (nama_pengguna, no_telp_pengguna, username_pengguna, password_pengguna, id_role_pengguna, id_jalan)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(insert_query, (nama, nomor_telepon, username, password, role, id_jalan))
+        cursor.execute(insert_query, (nama, nomor_telepon, username, password, id_role, id_jalan))
         connection.commit()
 
         print("\nRegistrasi Penjual Berhasil!")
@@ -439,26 +434,21 @@ def register_pembeli():
             elif len(password) > 15:
                 print('\nPassword terlalu panjang')
                 continue
-            check_query = '''SELECT password_pengguna
-                            FROM pengguna 
-                            WHERE password_pengguna = %s'''
-            cursor.execute(check_query, (password,))
-            check_pw = cursor.fetchone()
-
-            if check_pw:
-                print("\nPassword sudah digunakan! Silahkan gunakan password lain.")
-                next()
-                continue
             else:
                 next()
                 break
         role = "pembeli" 
         
+        cursor.execute("SELECT id_role_pengguna FROM role_pengguna WHERE role = %s", (role,))
+        row = cursor.fetchone()
+        if row:
+            id_role = row[0]
+
         insert_query = """
-        INSERT INTO pengguna (nama_pengguna, no_telp_pengguna, username_pengguna, password_pengguna, role, id_jalan)
+        INSERT INTO pengguna (nama_pengguna, no_telp_pengguna, username_pengguna, password_pengguna, id_role_pengguna, id_jalan)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(insert_query, (nama, nomor_telepon, username, password, role, id_jalan))
+        cursor.execute(insert_query, (nama, nomor_telepon, username, password, id_role, id_jalan))
         connection.commit()
         
         print("\nRegistrasi Pembeli Berhasil!")
@@ -515,13 +505,14 @@ def login():
                 break
 
         check_query = """
-        SELECT id_pengguna, nama_pengguna, role 
-        FROM pengguna 
-        WHERE username_pengguna = %s AND password_pengguna = %s
+        SELECT p.id_pengguna, p.nama_pengguna, r.role
+        FROM pengguna p
+        JOIN role_pengguna r ON p.id_role_pengguna = r.id_role_pengguna
+        WHERE p.username_pengguna = %s AND p.password_pengguna = %s
         """
         cursor.execute(check_query, (username, password))
         check_user = cursor.fetchone()
-        
+
         if check_user:
             id_pengguna = check_user[0]
             nama_pengguna = check_user[1]
@@ -856,14 +847,10 @@ def keranjang_pembeli(id_pengguna, username):
             return
         elif pilih == '2':
             while True:
-                hapus_produk = input('Nomor Produk yang ingin dihapus : ').strip()
+                hapus_produk = int(input('Nomor Produk yang ingin dihapus : '))
                 hapus_produk_fix = hapus_produk - 1
                 if hapus_produk == '':
                     print('\nTidak boleh kosong')
-                    next()
-                    continue
-                elif not hapus_produk.isdigit():
-                    print('\nNomor harus berupa angka')
                     next()
                     continue
                 elif hapus_produk_fix >= 0 and hapus_produk_fix < len(keranjang):
@@ -1483,11 +1470,12 @@ def admin_cek_pesanan(id_pengguna, username):
                         JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
                         JOIN produk pr ON dp.id_produk = pr.id_produk
                         JOIN pengguna pe ON p.id_pengguna = pe.id_pengguna
+                        JOIN role_pengguna r ON pe.id_role_pengguna = r.id_role_pengguna
                         JOIN jalan j ON pe.id_jalan = j.id_jalan
                         JOIN desa d ON j.id_desa = d.id_desa
                         JOIN kecamatan k ON d.id_kecamatan = k.id_kecamatan
                         JOIN kabupaten kb ON k.id_kabupaten = kb.id_kabupaten
-                        WHERE pe.role = 'pembeli'
+                        WHERE r.role = 'pembeli'
                         ORDER BY p.tanggal_pesanan ASC"""
             cursor.execute(query)
             pesanan_list = cursor.fetchall()
