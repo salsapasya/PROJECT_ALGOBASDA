@@ -1025,7 +1025,7 @@ def pembeli_cek_pesanan(id_pengguna, username):
                             FROM pesanan p
                             JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
                             JOIN produk pr ON dp.id_produk = pr.id_produk
-                            JOIN pengguna pg ON pr.id_pengguna = pg.id_pengguna
+                            JOIN pengguna pg ON p.id_pengguna = pg.id_pengguna
                             JOIN jalan j ON pg.id_jalan = j.id_jalan
                             JOIN desa d ON j.id_desa = d.id_desa
                             JOIN kecamatan k ON d.id_kecamatan = k.id_kecamatan
