@@ -245,6 +245,7 @@ def register_penjual():
                 password = input('Password (5-15 karakter) : ').strip()
                 if password == '':
                     print('\nPassword tidak boleh kosong')
+                    next()
                     continue
                 elif password == "exit":
                     next()
@@ -454,6 +455,7 @@ def register_pembeli():
                 password = input('Password (5-15 karakter) : ').strip()
                 if password == '':
                     print('\nPassword tidak boleh kosong')
+                    next()
                     continue
                 elif password == "exit":
                     next()
@@ -1074,11 +1076,11 @@ def pembeli_cek_pesanan(id_pengguna, username):
                             print("\nPesanan tidak ditemukan atau bukan milik Anda")
                             next()
                             continue                 
-                        if check_pesanan[1] != 'menunggu pembayaran':
+                        elif check_pesanan[1] != 'menunggu pembayaran':
                             # Hanya pesanan yang menunggu pembayaran boleh diubah jadi 'diproses'
                             print(f"\nPesanan ini sudah berstatus '{check_pesanan[1]}', tidak bisa diubah")
                             next()
-                            continue
+                            return
                         
                         # Update status pesanan dan laporan menjadi 'diproses'
                         cursor.execute("""UPDATE pesanan 
